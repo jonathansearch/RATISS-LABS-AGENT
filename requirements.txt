@@ -1,0 +1,5 @@
+# RATISS LABS AGENT — dépendances
+# Phase 0 : uniquement de quoi valider les contrats.
+
+jsonschema>=4.20,<5
+pytest>=8,<10

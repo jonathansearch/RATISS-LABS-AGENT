@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ratiss-labs.dev/contrats/tool.schema.json",
+  "title": "Tool",
+  "description": "Capacité d'exécution atomique, exposée par un serveur MCP. Un Tool ne contient aucune logique de planification : il exécute, il ne décide pas.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["nom", "version", "description", "serveur_mcp", "entrees", "sorties", "idempotent", "effets_de_bord", "niveau_risque"],
+  "properties": {
+    "nom": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Identifiant technique du tool (snake_case)."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Version sémantique du tool."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Description lisible par un agent : ce que fait le tool et quand l'utiliser."
+    },
+    "serveur_mcp": {
+      "type": "string",
+      "description": "Identifiant du serveur MCP qui expose ce tool (ex: filesystem, github)."
+    },
+    "entrees": {
+      "$ref": "#/$defs/schemaObjet",
+      "description": "JSON Schema des paramètres d'entrée."
+    },
+    "sorties": {
+      "$ref": "#/$defs/schemaObjet",
+      "description": "JSON Schema du résultat retourné."
+    },
+    "idempotent": {
+      "type": "boolean",
+      "description": "true si réexécuter le tool avec les mêmes entrées produit le même état."
+    },
+    "effets_de_bord": {
+      "type": "array",
+      "description": "Effets de bord déclarés. Vide = pur.",
+      "items": {
+        "type": "string",
+        "enum": ["lecture_fichier", "ecriture_fichier", "reseau_sortant", "execution_code", "git_push", "ecriture_base"]
+      }
+    },
+    "niveau_risque": {
+      "type": "string",
+      "enum": ["faible", "moyen", "eleve"],
+      "description": "Niveau de risque utilisé par le Policy Engine."
+    },
+    "timeout_s": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3600,
+      "default": 30,
+      "description": "Délai maximal d'exécution en secondes."
+    },
+    "provenance_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 du manifeste du serveur MCP source (RATISS-Framework)."
+    }
+  },
+  "$defs": {
+    "schemaObjet": {
+      "type": "object",
+      "required": ["type", "properties"],
+      "properties": {
+        "type": { "const": "object" },
+        "properties": { "type": "object" },
+        "required": { "type": "array", "items": { "type": "string" } },
+        "additionalProperties": { "type": "boolean" }
+      }
+    }
+  }
+}

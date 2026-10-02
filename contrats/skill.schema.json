@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ratiss-labs.dev/contrats/skill.schema.json",
+  "title": "Skill",
+  "description": "Procédure ou savoir-faire chargé progressivement (format SKILL.md). Un Skill oriente le raisonnement, il n'exécute pas directement : il recommande des Tools.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["nom", "description", "declencheurs", "niveau_chargement", "source", "version"],
+  "properties": {
+    "nom": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Identifiant du skill (kebab-case, comme le nom de dossier SKILL.md)."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Quand utiliser ce skill. Sert au déclenchement par similarité."
+    },
+    "declencheurs": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" },
+      "description": "Mots-clés ou intentions qui activent le chargement du skill."
+    },
+    "niveau_chargement": {
+      "type": "string",
+      "enum": ["metadonnees", "instructions", "ressources"],
+      "description": "Chargement progressif : metadonnees (toujours), instructions (si pertinent), ressources (à la demande)."
+    },
+    "source": {
+      "type": "string",
+      "description": "Origine du skill (dépôt du catalogue ou RATISS maison)."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "outils_recommandes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Noms des Tools que ce skill recommande d'appeler."
+    },
+    "licence": {
+      "type": "string",
+      "description": "Licence du skill. NOASSERTION ou non déclarée = usage commercial à vérifier."
+    },
+    "provenance_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

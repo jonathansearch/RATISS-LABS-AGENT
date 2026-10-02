@@ -1,0 +1,26 @@
+# RATISS LABS AGENT — stack locale minimale (Phase 0)
+# Objectif : une seule base PostgreSQL + pgvector pour la mémoire (V1).
+# Aucun secret en clair : tout passe par un fichier .env non versionné.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ratiss-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ratiss}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?definir POSTGRES_PASSWORD dans .env}
+      POSTGRES_DB: ${POSTGRES_DB:-ratiss}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ratiss_pgdata:/var/lib/postgresql/data
+      - ./sql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ratiss} -d ${POSTGRES_DB:-ratiss}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ratiss_pgdata:

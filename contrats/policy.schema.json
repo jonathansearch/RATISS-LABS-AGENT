@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ratiss-labs.dev/contrats/policy.schema.json",
+  "title": "Policy",
+  "description": "Règle de décision appliquée par le Policy Engine (OPA). Trois verdicts seulement : ALLOW, DENY, REQUIRE_APPROVAL. Aucune action hors politique n'est exécutée.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "description", "decision", "sujet", "action", "ressource"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["ALLOW", "DENY", "REQUIRE_APPROVAL"],
+      "description": "Verdict de la politique."
+    },
+    "sujet": {
+      "type": "string",
+      "description": "Qui déclenche l'action (ex: agent, humain, skill:<nom>)."
+    },
+    "action": {
+      "type": "string",
+      "enum": ["tool.appeler", "skill.charger", "modele.appeler", "memoire.lire", "memoire.ecrire", "artefact.ecrire", "reseau.sortant", "git.push"],
+      "description": "Action visée par la règle."
+    },
+    "ressource": {
+      "type": "string",
+      "description": "Ressource concernée (nom de tool, motif de chemin, domaine réseau, *)."
+    },
+    "conditions": {
+      "type": "object",
+      "description": "Conditions supplémentaires évaluées par OPA (Rego).",
+      "additionalProperties": true
+    },
+    "priorite": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 100,
+      "description": "Plus la valeur est basse, plus la règle est prioritaire en cas de conflit."
+    },
+    "raison": {
+      "type": "string",
+      "description": "Justification lisible, journalisée avec la décision."
+    }
+  }
+}

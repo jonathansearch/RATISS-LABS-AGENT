@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ratiss-labs.dev/contrats/task.schema.json",
+  "title": "Task",
+  "description": "Unité de travail planifiée par le control plane. Une Task décrit un objectif et ses dépendances ; elle est exécutée par le execution plane.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "objectif", "statut", "entrees", "dependances"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$",
+      "description": "Identifiant unique de la task dans le run."
+    },
+    "objectif": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Ce que la task doit accomplir, formulé de façon vérifiable."
+    },
+    "statut": {
+      "type": "string",
+      "enum": ["en_attente", "en_cours", "terminee", "echouee", "bloquee", "annulee"]
+    },
+    "entrees": {
+      "type": "object",
+      "description": "Données d'entrée de la task.",
+      "additionalProperties": true
+    },
+    "dependances": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "IDs des tasks qui doivent être terminées avant celle-ci."
+    },
+    "outils_autorises": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Liste blanche des Tools utilisables pour cette task (moindre privilège)."
+    },
+    "critere_done": {
+      "type": "string",
+      "description": "Condition vérifiable qui marque la task comme terminée."
+    },
+    "resultat": {
+      "type": ["object", "null"],
+      "description": "Résultat produit, null tant que la task n'est pas terminée.",
+      "additionalProperties": true
+    },
+    "cout": {
+      "type": "object",
+      "description": "Coût mesuré de la task.",
+      "additionalProperties": false,
+      "properties": {
+        "tokens": { "type": "integer", "minimum": 0 },
+        "duree_s": { "type": "number", "minimum": 0 },
+        "appels_outils": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

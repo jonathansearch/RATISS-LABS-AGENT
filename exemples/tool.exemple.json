@@ -1,0 +1,26 @@
+{
+  "nom": "lire_fichier",
+  "version": "1.0.0",
+  "description": "Lit le contenu d'un fichier texte dans la sandbox repository et le retourne.",
+  "serveur_mcp": "filesystem",
+  "entrees": {
+    "type": "object",
+    "properties": {
+      "chemin": { "type": "string", "description": "Chemin relatif dans la sandbox." }
+    },
+    "required": ["chemin"],
+    "additionalProperties": false
+  },
+  "sorties": {
+    "type": "object",
+    "properties": {
+      "contenu": { "type": "string" },
+      "sha256": { "type": "string" }
+    },
+    "required": ["contenu"]
+  },
+  "idempotent": true,
+  "effets_de_bord": ["lecture_fichier"],
+  "niveau_risque": "faible",
+  "timeout_s": 10
+}

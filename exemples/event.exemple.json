@@ -1,0 +1,11 @@
+{
+  "id": "e1-outil-appele",
+  "type": "outil_appele",
+  "horodatage": "2026-10-02T14:47:02Z",
+  "run_id": "run-demo-001",
+  "task_id": "t1-lire-catalogue",
+  "acteur": "execution_plane",
+  "donnees": { "outil": "lire_fichier", "entrees": { "chemin": "CATALOGUE.md" } },
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "span_id": "00f067aa0ba902b7"
+}

@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ratiss-labs.dev/contrats/run.schema.json",
+  "title": "Run",
+  "description": "Exécution complète d'une demande : un plan, des tasks, des événements, des artefacts et un manifeste de provenance. Un Run sans provenance n'existe pas.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "objectif", "statut", "debut", "plan", "tasks", "provenance"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$",
+      "description": "Identifiant unique du run."
+    },
+    "objectif": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Demande initiale de l'humain."
+    },
+    "statut": {
+      "type": "string",
+      "enum": ["en_attente_approbation", "en_cours", "termine", "echoue", "annule"]
+    },
+    "debut": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "fin": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "plan": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "task.schema.json" },
+      "description": "Tasks ordonnées composant le plan."
+    },
+    "tasks": {
+      "type": "array",
+      "items": { "$ref": "task.schema.json" },
+      "description": "État courant des tasks (plan initial + exécution)."
+    },
+    "evenements": {
+      "type": "array",
+      "items": { "$ref": "event.schema.json" },
+      "description": "Journal des événements du run."
+    },
+    "artefacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["nom", "sha256"],
+        "properties": {
+          "nom": { "type": "string" },
+          "chemin": { "type": "string" },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["moteur", "manifeste_sha256", "journal_sha256"],
+      "properties": {
+        "moteur": {
+          "const": "RATISS-Framework",
+          "description": "Le cœur de vérification transversal."
+        },
+        "manifeste_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "journal_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["in-toto", "ratiss-v1"],
+          "default": "ratiss-v1"
+        }
+      }
+    },
+    "cout_total": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tokens": { "type": "integer", "minimum": 0 },
+        "duree_s": { "type": "number", "minimum": 0 },
+        "appels_outils": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

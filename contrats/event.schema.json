@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ratiss-labs.dev/contrats/event.schema.json",
+  "title": "Event",
+  "description": "Événement journalisé d'un run. Format compatible OpenTelemetry : tout ce qui se passe est un événement horodaté et corrélé.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "type", "horodatage", "run_id", "acteur"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "run_demarre",
+        "run_termine",
+        "task_demarree",
+        "task_terminee",
+        "outil_appele",
+        "outil_resultat",
+        "modele_appele",
+        "approbation_demandee",
+        "approbation_accordee",
+        "approbation_refusee",
+        "politique_appliquee",
+        "erreur",
+        "souvenir_lu",
+        "souvenir_ecrit"
+      ],
+      "description": "Type d'événement."
+    },
+    "horodatage": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Horodatage ISO-8601 en UTC."
+    },
+    "run_id": {
+      "type": "string",
+      "description": "Identifiant du run auquel l'événement appartient (corrélation)."
+    },
+    "task_id": {
+      "type": ["string", "null"],
+      "description": "Task concernée, si applicable."
+    },
+    "acteur": {
+      "type": "string",
+      "enum": ["control_plane", "execution_plane", "humain", "systeme"],
+      "description": "Qui a produit l'événement."
+    },
+    "donnees": {
+      "type": "object",
+      "description": "Charge utile de l'événement.",
+      "additionalProperties": true
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Identifiant de trace OpenTelemetry."
+    },
+    "span_id": {
+      "type": "string",
+      "description": "Identifiant de span OpenTelemetry."
+    }
+  }
+}
