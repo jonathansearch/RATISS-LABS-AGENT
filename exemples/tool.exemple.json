@@ -1,26 +1,32 @@
 {
-  "nom": "lire_fichier",
-  "version": "1.0.0",
+  "name": "read_file",
+  "title": "Read File",
   "description": "Lit le contenu d'un fichier texte dans la sandbox repository et le retourne.",
-  "serveur_mcp": "filesystem",
-  "entrees": {
+  "inputSchema": {
     "type": "object",
     "properties": {
-      "chemin": { "type": "string", "description": "Chemin relatif dans la sandbox." }
+      "path": {
+        "type": "string",
+        "description": "Chemin relatif dans la sandbox."
+      }
     },
-    "required": ["chemin"],
+    "required": [
+      "path"
+    ],
     "additionalProperties": false
   },
-  "sorties": {
-    "type": "object",
-    "properties": {
-      "contenu": { "type": "string" },
-      "sha256": { "type": "string" }
-    },
-    "required": ["contenu"]
+  "annotations": {
+    "readOnlyHint": true,
+    "idempotentHint": true
   },
-  "idempotent": true,
-  "effets_de_bord": ["lecture_fichier"],
-  "niveau_risque": "faible",
-  "timeout_s": 10
+  "x-ratiss": {
+    "version": "1.0.0",
+    "serveur_mcp": "filesystem",
+    "idempotent": true,
+    "effets_de_bord": [
+      "lecture_fichier"
+    ],
+    "niveau_risque": "faible",
+    "timeout_s": 10
+  }
 }

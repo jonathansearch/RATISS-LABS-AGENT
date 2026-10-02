@@ -1,51 +1,67 @@
 {
   "id": "run-demo-001",
-  "objectif": "Lire le catalogue RATISS et produire la liste des dépôts V1.",
-  "statut": "termine",
-  "debut": "2026-10-02T14:47:00Z",
-  "fin": "2026-10-02T14:47:05Z",
+  "objective": "Lire le catalogue RATISS et produire la liste des dépôts V1.",
+  "status": "done",
+  "started_at": "2026-10-02T14:47:00Z",
+  "ended_at": "2026-10-02T14:47:05Z",
   "plan": [
     {
       "id": "t1-lire-catalogue",
-      "objectif": "Lire le CATALOGUE.md et extraire les dépôts de statut V1.",
-      "statut": "terminee",
-      "entrees": { "fichier": "CATALOGUE.md" },
-      "dependances": [],
-      "outils_autorises": ["lire_fichier"],
-      "critere_done": "La liste des dépôts V1 est produite et non vide."
+      "objective": "Lire le CATALOGUE.md et extraire les dépôts de statut V1.",
+      "status": "done",
+      "inputs": {
+        "fichier": "CATALOGUE.md"
+      },
+      "dependencies": [],
+      "allowed_tools": [
+        "read_file"
+      ],
+      "done_criteria": "La liste des dépôts V1 est produite et non vide."
     }
   ],
   "tasks": [
     {
       "id": "t1-lire-catalogue",
-      "objectif": "Lire le CATALOGUE.md et extraire les dépôts de statut V1.",
-      "statut": "terminee",
-      "entrees": { "fichier": "CATALOGUE.md" },
-      "dependances": [],
-      "resultat": { "nb_v1": 12 }
+      "objective": "Lire le CATALOGUE.md et extraire les dépôts de statut V1.",
+      "status": "done",
+      "inputs": {
+        "fichier": "CATALOGUE.md"
+      },
+      "dependencies": [],
+      "result": {
+        "nb_v1": 12
+      }
     }
   ],
-  "evenements": [
+  "events": [
     {
+      "specversion": "1.0",
       "id": "e0-run-demarre",
+      "source": "/ratiss/runtime",
       "type": "run_demarre",
-      "horodatage": "2026-10-02T14:47:00Z",
-      "run_id": "run-demo-001",
-      "acteur": "control_plane"
+      "time": "2026-10-02T14:47:00Z",
+      "x-ratiss": {
+        "run_id": "run-demo-001",
+        "actor": "control_plane"
+      }
     }
   ],
-  "artefacts": [
+  "artifacts": [
     {
-      "nom": "liste-v1.json",
-      "chemin": "artefacts/liste-v1.json",
+      "name": "liste-v1.json",
+      "path": "artefacts/liste-v1.json",
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     }
   ],
   "provenance": {
-    "moteur": "RATISS-Framework",
-    "manifeste_sha256": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678abcdef0123456789abcdef01",
+    "engine": "RATISS-Framework",
+    "manifest_sha256": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678abcdef0123456789abcdef01",
     "journal_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     "format": "ratiss-v1"
   },
-  "cout_total": { "tokens": 1200, "duree_s": 5.0, "appels_outils": 1 }
+  "total_cost": {
+    "tokens": 1200,
+    "duration_s": 5.0,
+    "tool_calls": 1
+  }
 }

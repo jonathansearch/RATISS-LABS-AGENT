@@ -2,72 +2,103 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ratiss-labs.dev/contrats/run.schema.json",
   "title": "Run",
-  "description": "Exécution complète d'une demande : un plan, des tasks, des événements, des artefacts et un manifeste de provenance. Un Run sans provenance n'existe pas.",
+  "description": "Exécution complète : plan, tasks, événements, artefacts, provenance. Un Run sans provenance n'existe pas.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "objectif", "statut", "debut", "plan", "tasks", "provenance"],
+  "required": [
+    "id",
+    "objective",
+    "status",
+    "started_at",
+    "plan",
+    "tasks",
+    "provenance"
+  ],
   "properties": {
     "id": {
       "type": "string",
-      "pattern": "^[a-z0-9][a-z0-9_-]*$",
-      "description": "Identifiant unique du run."
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
     },
-    "objectif": {
+    "objective": {
       "type": "string",
-      "minLength": 10,
-      "description": "Demande initiale de l'humain."
+      "minLength": 10
     },
-    "statut": {
+    "status": {
       "type": "string",
-      "enum": ["en_attente_approbation", "en_cours", "termine", "echoue", "annule"]
+      "enum": [
+        "pending_approval",
+        "running",
+        "done",
+        "failed",
+        "cancelled"
+      ]
     },
-    "debut": {
+    "started_at": {
       "type": "string",
       "format": "date-time"
     },
-    "fin": {
-      "type": ["string", "null"],
+    "ended_at": {
+      "type": [
+        "string",
+        "null"
+      ],
       "format": "date-time"
     },
     "plan": {
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "task.schema.json" },
-      "description": "Tasks ordonnées composant le plan."
+      "items": {
+        "$ref": "task.schema.json"
+      }
     },
     "tasks": {
       "type": "array",
-      "items": { "$ref": "task.schema.json" },
-      "description": "État courant des tasks (plan initial + exécution)."
+      "items": {
+        "$ref": "task.schema.json"
+      }
     },
-    "evenements": {
+    "events": {
       "type": "array",
-      "items": { "$ref": "event.schema.json" },
-      "description": "Journal des événements du run."
+      "items": {
+        "$ref": "event.schema.json"
+      }
     },
-    "artefacts": {
+    "artifacts": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["nom", "sha256"],
+        "required": [
+          "name",
+          "sha256"
+        ],
         "properties": {
-          "nom": { "type": "string" },
-          "chemin": { "type": "string" },
-          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
         }
       }
     },
     "provenance": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["moteur", "manifeste_sha256", "journal_sha256"],
+      "required": [
+        "engine",
+        "manifest_sha256",
+        "journal_sha256"
+      ],
       "properties": {
-        "moteur": {
-          "const": "RATISS-Framework",
-          "description": "Le cœur de vérification transversal."
+        "engine": {
+          "const": "RATISS-Framework"
         },
-        "manifeste_sha256": {
+        "manifest_sha256": {
           "type": "string",
           "pattern": "^[a-f0-9]{64}$"
         },
@@ -77,18 +108,45 @@
         },
         "format": {
           "type": "string",
-          "enum": ["in-toto", "ratiss-v1"],
+          "enum": [
+            "in-toto",
+            "ratiss-v1"
+          ],
           "default": "ratiss-v1"
         }
       }
     },
-    "cout_total": {
+    "total_cost": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "tokens": { "type": "integer", "minimum": 0 },
-        "duree_s": { "type": "number", "minimum": 0 },
-        "appels_outils": { "type": "integer", "minimum": 0 }
+        "tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "duration_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "tool_calls": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "x-ratiss": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Extensions RATISS (hors standard externe).",
+      "properties": {
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "provenance_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
       }
     }
   }

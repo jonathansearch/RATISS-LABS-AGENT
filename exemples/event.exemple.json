@@ -1,11 +1,20 @@
 {
+  "specversion": "1.0",
   "id": "e1-outil-appele",
+  "source": "/ratiss/runtime",
   "type": "outil_appele",
-  "horodatage": "2026-10-02T14:47:02Z",
-  "run_id": "run-demo-001",
-  "task_id": "t1-lire-catalogue",
-  "acteur": "execution_plane",
-  "donnees": { "outil": "lire_fichier", "entrees": { "chemin": "CATALOGUE.md" } },
-  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
-  "span_id": "00f067aa0ba902b7"
+  "time": "2026-10-02T14:47:02Z",
+  "data": {
+    "outil": "read_file",
+    "entrees": {
+      "path": "CATALOGUE.md"
+    }
+  },
+  "x-ratiss": {
+    "run_id": "run-demo-001",
+    "task_id": "t1-lire-catalogue",
+    "actor": "execution_plane",
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "span_id": "00f067aa0ba902b7"
+  }
 }

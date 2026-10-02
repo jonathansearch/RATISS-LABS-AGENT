@@ -2,77 +2,126 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ratiss-labs.dev/contrats/tool.schema.json",
   "title": "Tool",
-  "description": "Capacité d'exécution atomique, exposée par un serveur MCP. Un Tool ne contient aucune logique de planification : il exécute, il ne décide pas.",
+  "description": "Capacité d'exécution atomique exposée par un serveur MCP. Aligné sur la spécification MCP : `name`, `description`, `inputSchema`, `outputSchema`, `annotations`. Extensions RATISS dans `x-ratiss`.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["nom", "version", "description", "serveur_mcp", "entrees", "sorties", "idempotent", "effets_de_bord", "niveau_risque"],
+  "required": [
+    "name",
+    "inputSchema"
+  ],
   "properties": {
-    "nom": {
+    "name": {
       "type": "string",
-      "pattern": "^[a-z][a-z0-9_]*$",
-      "description": "Identifiant technique du tool (snake_case)."
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Nom programmatique du tool (spécification MCP)."
     },
-    "version": {
+    "title": {
       "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$",
-      "description": "Version sémantique du tool."
+      "description": "Titre lisible (MCP)."
     },
     "description": {
       "type": "string",
-      "minLength": 10,
-      "description": "Description lisible par un agent : ce que fait le tool et quand l'utiliser."
+      "description": "Description lisible par un agent (MCP)."
     },
-    "serveur_mcp": {
-      "type": "string",
-      "description": "Identifiant du serveur MCP qui expose ce tool (ex: filesystem, github)."
+    "inputSchema": {
+      "$ref": "#/$defs/jsonSchemaObject",
+      "description": "JSON Schema des paramètres (MCP)."
     },
-    "entrees": {
-      "$ref": "#/$defs/schemaObjet",
-      "description": "JSON Schema des paramètres d'entrée."
+    "outputSchema": {
+      "$ref": "#/$defs/jsonSchemaObject",
+      "description": "JSON Schema de la sortie structurée (MCP, optionnel)."
     },
-    "sorties": {
-      "$ref": "#/$defs/schemaObjet",
-      "description": "JSON Schema du résultat retourné."
+    "annotations": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Indications du serveur MCP (title, readOnlyHint, destructiveHint, idempotentHint, openWorldHint)."
     },
-    "idempotent": {
-      "type": "boolean",
-      "description": "true si réexécuter le tool avec les mêmes entrées produit le même état."
+    "_meta": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Champ `_meta` MCP."
     },
-    "effets_de_bord": {
-      "type": "array",
-      "description": "Effets de bord déclarés. Vide = pur.",
-      "items": {
-        "type": "string",
-        "enum": ["lecture_fichier", "ecriture_fichier", "reseau_sortant", "execution_code", "git_push", "ecriture_base"]
+    "x-ratiss": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Extensions RATISS (hors standard externe).",
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "serveur_mcp": {
+          "type": "string",
+          "description": "Serveur MCP qui expose ce tool (filesystem, github…)."
+        },
+        "source_catalogue": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "provenance_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "idempotent": {
+          "type": "boolean"
+        },
+        "effets_de_bord": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "lecture_fichier",
+              "ecriture_fichier",
+              "reseau_sortant",
+              "execution_code",
+              "git_push",
+              "ecriture_base"
+            ]
+          }
+        },
+        "niveau_risque": {
+          "type": "string",
+          "enum": [
+            "faible",
+            "moyen",
+            "eleve"
+          ]
+        },
+        "timeout_s": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600,
+          "default": 30
+        }
       }
-    },
-    "niveau_risque": {
-      "type": "string",
-      "enum": ["faible", "moyen", "eleve"],
-      "description": "Niveau de risque utilisé par le Policy Engine."
-    },
-    "timeout_s": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 3600,
-      "default": 30,
-      "description": "Délai maximal d'exécution en secondes."
-    },
-    "provenance_hash": {
-      "type": "string",
-      "pattern": "^[a-f0-9]{64}$",
-      "description": "SHA-256 du manifeste du serveur MCP source (RATISS-Framework)."
     }
   },
   "$defs": {
-    "schemaObjet": {
+    "jsonSchemaObject": {
       "type": "object",
-      "required": ["type", "properties"],
+      "required": [
+        "type"
+      ],
       "properties": {
-        "type": { "const": "object" },
-        "properties": { "type": "object" },
-        "required": { "type": "array", "items": { "type": "string" } },
-        "additionalProperties": { "type": "boolean" }
+        "type": {
+          "const": "object"
+        },
+        "properties": {
+          "type": "object"
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": {
+          "type": "boolean"
+        }
       }
     }
   }

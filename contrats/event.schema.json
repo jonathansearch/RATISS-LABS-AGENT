@@ -2,65 +2,109 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ratiss-labs.dev/contrats/event.schema.json",
   "title": "Event",
-  "description": "Événement journalisé d'un run. Format compatible OpenTelemetry : tout ce qui se passe est un événement horodaté et corrélé.",
+  "description": "Événement journalisé d'un run, au format CloudEvents. Requis : `specversion`, `id`, `source`, `type`, `time`. Optionnels : `subject`, `datacontenttype`, `dataschema`, `data`. Les attributs d'extension CloudEvents (minuscules et chiffres) sont acceptés. Extensions RATISS dans `x-ratiss`.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "type", "horodatage", "run_id", "acteur"],
+  "patternProperties": {
+    "^[a-z0-9]+$": {}
+  },
+  "required": [
+    "specversion",
+    "id",
+    "source",
+    "type",
+    "time"
+  ],
   "properties": {
+    "specversion": {
+      "const": "1.0",
+      "description": "Version CloudEvents."
+    },
     "id": {
       "type": "string",
-      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+      "minLength": 1,
+      "description": "Identifiant de l'événement (CloudEvents)."
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Producteur de l'événement (CloudEvents)."
     },
     "type": {
       "type": "string",
-      "enum": [
-        "run_demarre",
-        "run_termine",
-        "task_demarree",
-        "task_terminee",
-        "outil_appele",
-        "outil_resultat",
-        "modele_appele",
-        "approbation_demandee",
-        "approbation_accordee",
-        "approbation_refusee",
-        "politique_appliquee",
-        "erreur",
-        "souvenir_lu",
-        "souvenir_ecrit"
-      ],
-      "description": "Type d'événement."
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "description": "Type de l'événement (CloudEvents). RATISS emploie des types snake_case : run_demarre, outil_appele, approbation_demandee… ; un type inverse-DNS CloudEvents (com.exemple.sujet.ouvert) est aussi valide."
     },
-    "horodatage": {
+    "time": {
       "type": "string",
       "format": "date-time",
-      "description": "Horodatage ISO-8601 en UTC."
+      "description": "Horodatage ISO-8601 (CloudEvents)."
     },
-    "run_id": {
+    "subject": {
       "type": "string",
-      "description": "Identifiant du run auquel l'événement appartient (corrélation)."
+      "description": "Sujet de l'événement (CloudEvents, optionnel)."
     },
-    "task_id": {
-      "type": ["string", "null"],
-      "description": "Task concernée, si applicable."
-    },
-    "acteur": {
+    "datacontenttype": {
       "type": "string",
-      "enum": ["control_plane", "execution_plane", "humain", "systeme"],
-      "description": "Qui a produit l'événement."
+      "description": "Type de contenu de `data` (CloudEvents)."
     },
-    "donnees": {
+    "dataschema": {
+      "type": "string",
+      "format": "uri",
+      "description": "Schéma de `data` (CloudEvents)."
+    },
+    "data": {
+      "description": "Charge utile de l'événement (CloudEvents) : tout type JSON (objet, chaîne, nombre…)."
+    },
+    "x-ratiss": {
       "type": "object",
-      "description": "Charge utile de l'événement.",
-      "additionalProperties": true
-    },
-    "trace_id": {
-      "type": "string",
-      "description": "Identifiant de trace OpenTelemetry."
-    },
-    "span_id": {
-      "type": "string",
-      "description": "Identifiant de span OpenTelemetry."
+      "additionalProperties": false,
+      "description": "Extensions RATISS (hors standard externe).",
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "description": "Run auquel appartient l'événement."
+        },
+        "task_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Task concernée, si applicable."
+        },
+        "actor": {
+          "type": "string",
+          "enum": [
+            "control_plane",
+            "execution_plane",
+            "humain",
+            "systeme"
+          ]
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Numéro de séquence interne."
+        },
+        "trace_id": {
+          "type": "string"
+        },
+        "span_id": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "provenance_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "run_id"
+      ]
     }
   }
 }

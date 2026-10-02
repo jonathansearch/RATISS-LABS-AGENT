@@ -2,57 +2,94 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ratiss-labs.dev/contrats/task.schema.json",
   "title": "Task",
-  "description": "Unité de travail planifiée par le control plane. Une Task décrit un objectif et ses dépendances ; elle est exécutée par le execution plane.",
+  "description": "Unité de travail planifiée par le control plane, exécutée par l'execution plane.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "objectif", "statut", "entrees", "dependances"],
+  "required": [
+    "id",
+    "objective",
+    "status",
+    "inputs",
+    "dependencies"
+  ],
   "properties": {
     "id": {
       "type": "string",
-      "pattern": "^[a-z0-9][a-z0-9_-]*$",
-      "description": "Identifiant unique de la task dans le run."
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
     },
-    "objectif": {
+    "objective": {
       "type": "string",
-      "minLength": 10,
-      "description": "Ce que la task doit accomplir, formulé de façon vérifiable."
+      "minLength": 10
     },
-    "statut": {
+    "status": {
       "type": "string",
-      "enum": ["en_attente", "en_cours", "terminee", "echouee", "bloquee", "annulee"]
+      "enum": [
+        "pending",
+        "running",
+        "done",
+        "failed",
+        "blocked",
+        "cancelled"
+      ]
     },
-    "entrees": {
+    "inputs": {
       "type": "object",
-      "description": "Données d'entrée de la task.",
       "additionalProperties": true
     },
-    "dependances": {
+    "dependencies": {
       "type": "array",
-      "items": { "type": "string" },
-      "description": "IDs des tasks qui doivent être terminées avant celle-ci."
+      "items": {
+        "type": "string"
+      }
     },
-    "outils_autorises": {
+    "allowed_tools": {
       "type": "array",
-      "items": { "type": "string" },
-      "description": "Liste blanche des Tools utilisables pour cette task (moindre privilège)."
+      "items": {
+        "type": "string"
+      },
+      "description": "Liste blanche des Tools utilisables (moindre privilège)."
     },
-    "critere_done": {
-      "type": "string",
-      "description": "Condition vérifiable qui marque la task comme terminée."
+    "done_criteria": {
+      "type": "string"
     },
-    "resultat": {
-      "type": ["object", "null"],
-      "description": "Résultat produit, null tant que la task n'est pas terminée.",
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ],
       "additionalProperties": true
     },
-    "cout": {
+    "cost": {
       "type": "object",
-      "description": "Coût mesuré de la task.",
       "additionalProperties": false,
       "properties": {
-        "tokens": { "type": "integer", "minimum": 0 },
-        "duree_s": { "type": "number", "minimum": 0 },
-        "appels_outils": { "type": "integer", "minimum": 0 }
+        "tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "duration_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "tool_calls": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "x-ratiss": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Extensions RATISS (hors standard externe).",
+      "properties": {
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "provenance_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
       }
     }
   }
