@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ratiss-labs.dev/contrats/tool.schema.json",
+  "title": "Tool",
+  "description": "Capacité d'exécution atomique exposée par un serveur MCP. Aligné sur la spécification MCP : `name`, `description`, `inputSchema`, `outputSchema`, `annotations`. Extensions RATISS dans `x-ratiss`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "inputSchema"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Nom programmatique du tool (spécification MCP)."
+    },
+    "title": {
+      "type": "string",
+      "description": "Titre lisible (MCP)."
+    },
+    "description": {
+      "type": "string",
+      "description": "Description lisible par un agent (MCP)."
+    },
+    "inputSchema": {
+      "$ref": "#/$defs/jsonSchemaObject",
+      "description": "JSON Schema des paramètres (MCP)."
+    },
+    "outputSchema": {
+      "$ref": "#/$defs/jsonSchemaObject",
+      "description": "JSON Schema de la sortie structurée (MCP, optionnel)."
+    },
+    "annotations": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Indications du serveur MCP (title, readOnlyHint, destructiveHint, idempotentHint, openWorldHint)."
+    },
+    "_meta": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Champ `_meta` MCP."
+    },
+    "x-ratiss": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Extensions RATISS (hors standard externe).",
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "serveur_mcp": {
+          "type": "string",
+          "description": "Serveur MCP qui expose ce tool (filesystem, github…)."
+        },
+        "source_catalogue": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "provenance_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "idempotent": {
+          "type": "boolean"
+        },
+        "effets_de_bord": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "lecture_fichier",
+              "ecriture_fichier",
+              "reseau_sortant",
+              "execution_code",
+              "git_push",
+              "ecriture_base"
+            ]
+          }
+        },
+        "niveau_risque": {
+          "type": "string",
+          "enum": [
+            "faible",
+            "moyen",
+            "eleve"
+          ]
+        },
+        "timeout_s": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600,
+          "default": 30
+        }
+      }
+    }
+  },
+  "$defs": {
+    "jsonSchemaObject": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "const": "object"
+        },
+        "properties": {
+          "type": "object"
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

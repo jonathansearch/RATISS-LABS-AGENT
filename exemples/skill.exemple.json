@@ -1,0 +1,20 @@
+{
+  "name": "recherche-arxiv",
+  "description": "Rechercher et lire des articles arXiv pour un workflow de recherche scientifique.",
+  "license": "Apache-2.0",
+  "x-ratiss": {
+    "version": "1.0.0",
+    "source_catalogue": "blazickjp/arxiv-mcp-server",
+    "declencheurs": [
+      "arxiv",
+      "papier",
+      "prépublication",
+      "littérature scientifique"
+    ],
+    "niveau_chargement": "instructions",
+    "outils_recommandes": [
+      "rechercher_arxiv",
+      "lire_arxiv"
+    ]
+  }
+}

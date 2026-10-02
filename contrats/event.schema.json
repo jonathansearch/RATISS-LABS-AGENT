@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ratiss-labs.dev/contrats/event.schema.json",
+  "title": "Event",
+  "description": "Événement journalisé d'un run, au format CloudEvents. Requis : `specversion`, `id`, `source`, `type`, `time`. Optionnels : `subject`, `datacontenttype`, `dataschema`, `data`. Les attributs d'extension CloudEvents (minuscules et chiffres) sont acceptés. Extensions RATISS dans `x-ratiss`.",
+  "type": "object",
+  "additionalProperties": false,
+  "patternProperties": {
+    "^[a-z0-9]+$": {}
+  },
+  "required": [
+    "specversion",
+    "id",
+    "source",
+    "type",
+    "time"
+  ],
+  "properties": {
+    "specversion": {
+      "const": "1.0",
+      "description": "Version CloudEvents."
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Identifiant de l'événement (CloudEvents)."
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Producteur de l'événement (CloudEvents)."
+    },
+    "type": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "description": "Type de l'événement (CloudEvents). RATISS emploie des types snake_case : run_demarre, outil_appele, approbation_demandee… ; un type inverse-DNS CloudEvents (com.exemple.sujet.ouvert) est aussi valide."
+    },
+    "time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Horodatage ISO-8601 (CloudEvents)."
+    },
+    "subject": {
+      "type": "string",
+      "description": "Sujet de l'événement (CloudEvents, optionnel)."
+    },
+    "datacontenttype": {
+      "type": "string",
+      "description": "Type de contenu de `data` (CloudEvents)."
+    },
+    "dataschema": {
+      "type": "string",
+      "format": "uri",
+      "description": "Schéma de `data` (CloudEvents)."
+    },
+    "traceparent": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Extension CloudEvents de traçage distribué (W3C Trace Context) : version-traceid-spanid-flags. Porte la corrélation OpenTelemetry."
+    },
+    "tracestate": {
+      "type": "string",
+      "description": "Extension CloudEvents de traçage distribué (W3C Trace Context), optionnelle."
+    },
+    "data": {
+      "description": "Charge utile de l'événement (CloudEvents) : tout type JSON (objet, chaîne, nombre…)."
+    },
+    "x-ratiss": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Extensions RATISS (hors standard externe).",
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "description": "Run auquel appartient l'événement."
+        },
+        "task_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Task concernée, si applicable."
+        },
+        "actor": {
+          "type": "string",
+          "enum": [
+            "control_plane",
+            "execution_plane",
+            "humain",
+            "systeme"
+          ]
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Numéro de séquence interne."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "provenance_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "run_id"
+      ]
+    }
+  }
+}

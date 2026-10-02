@@ -1,0 +1,32 @@
+{
+  "name": "read_file",
+  "title": "Read File",
+  "description": "Lit le contenu d'un fichier texte dans la sandbox repository et le retourne.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Chemin relatif dans la sandbox."
+      }
+    },
+    "required": [
+      "path"
+    ],
+    "additionalProperties": false
+  },
+  "annotations": {
+    "readOnlyHint": true,
+    "idempotentHint": true
+  },
+  "x-ratiss": {
+    "version": "1.0.0",
+    "serveur_mcp": "filesystem",
+    "idempotent": true,
+    "effets_de_bord": [
+      "lecture_fichier"
+    ],
+    "niveau_risque": "faible",
+    "timeout_s": 10
+  }
+}

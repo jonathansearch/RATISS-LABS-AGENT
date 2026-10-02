@@ -1,0 +1,10 @@
+{
+  "id": "p-git-push-approbation",
+  "description": "Toute poussée git vers un dépôt distant exige une approbation humaine explicite.",
+  "decision": "REQUIRE_APPROVAL",
+  "subject": "agent",
+  "action": "git.push",
+  "resource": "*",
+  "priority": 10,
+  "reason": "Action irréversible à distance : jamais automatique en V1."
+}

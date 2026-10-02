@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ratiss-labs.dev/contrats/skill.schema.json",
+  "title": "Skill",
+  "description": "Procédure ou savoir-faire chargé progressivement (format SKILL.md). Aligné sur la spécification Agent Skills : requis `name` (≤ 64) et `description` (≤ 1024) ; optionnels `license`, `compatibility` (≤ 500), `metadata`, `allowed-tools`. Extensions RATISS dans `x-ratiss`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "description"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "maxLength": 64,
+      "description": "Nom du skill (Agent Skills) : minuscules/chiffres/tirets, sans tiret en bord ni consécutif."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "Ce que fait le skill et quand l'utiliser (Agent Skills)."
+    },
+    "license": {
+      "type": "string",
+      "description": "Nom de licence ou référence à un fichier de licence (Agent Skills)."
+    },
+    "compatibility": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Prérequis d'environnement (Agent Skills)."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Métadonnées libres (Agent Skills). Valeurs imbriquées autorisées."
+    },
+    "allowed-tools": {
+      "type": "string",
+      "description": "Outils pré-approuvés, séparés par des espaces (Agent Skills, expérimental)."
+    },
+    "x-ratiss": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Extensions RATISS (hors standard externe).",
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "source_catalogue": {
+          "type": "string",
+          "description": "Dépôt du catalogue dont provient le skill."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "provenance_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "declencheurs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Mots-clés activant le chargement."
+        },
+        "niveau_chargement": {
+          "type": "string",
+          "enum": [
+            "metadonnees",
+            "instructions",
+            "ressources"
+          ]
+        },
+        "outils_recommandes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

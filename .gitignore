@@ -1,0 +1,16 @@
+# Secrets et configuration locale — ne jamais versionner
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Artefacts de run (produits, non versionnés)
+artefacts/
+
+# Divers
+.DS_Store

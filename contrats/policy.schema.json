@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ratiss-labs.dev/contrats/policy.schema.json",
+  "title": "Policy",
+  "description": "Règle de décision du Policy Engine (OPA). Trois verdicts : ALLOW, DENY, REQUIRE_APPROVAL.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "description",
+    "decision",
+    "subject",
+    "action",
+    "resource"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "ALLOW",
+        "DENY",
+        "REQUIRE_APPROVAL"
+      ]
+    },
+    "subject": {
+      "type": "string",
+      "description": "Qui déclenche l'action (agent, humain, skill:<nom>)."
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "tool.call",
+        "skill.load",
+        "model.call",
+        "memory.read",
+        "memory.write",
+        "artifact.write",
+        "network.egress",
+        "git.push"
+      ]
+    },
+    "resource": {
+      "type": "string",
+      "description": "Ressource visée (nom de tool, motif de chemin, domaine, *)."
+    },
+    "conditions": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "priority": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 100
+    },
+    "reason": {
+      "type": "string"
+    },
+    "x-ratiss": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Extensions RATISS (hors standard externe).",
+      "properties": {
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "provenance_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    }
+  }
+}

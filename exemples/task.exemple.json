@@ -1,0 +1,21 @@
+{
+  "id": "t1-lire-catalogue",
+  "objective": "Lire le CATALOGUE.md et extraire les dépôts de statut V1.",
+  "status": "done",
+  "inputs": {
+    "fichier": "CATALOGUE.md"
+  },
+  "dependencies": [],
+  "allowed_tools": [
+    "read_file"
+  ],
+  "done_criteria": "La liste des dépôts V1 est produite et non vide.",
+  "result": {
+    "nb_v1": 12
+  },
+  "cost": {
+    "tokens": 1200,
+    "duration_s": 3.2,
+    "tool_calls": 1
+  }
+}
