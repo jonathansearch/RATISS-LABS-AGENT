@@ -1,0 +1,18 @@
+# RATISS LABS AGENT — dépendances Phase 1 (noyau), épinglées.
+#
+# Licences vérifiées via les métadonnées PyPI (PEP 639 `license_expression`) :
+#   - langgraph      1.2.12  -> MIT
+#   - litellm        1.103.2 -> MIT
+#   - langchain-core 1.6.6   -> MIT
+#   - pydantic       2.13.5  -> MIT
+# Toutes MIT : usage autorisé. Aucun tag `latest`, aucun install global.
+#
+# Installation UNIQUEMENT dans un venv isolé :
+#   python3 -m venv .venv && .venv/bin/pip install -r requirements-phase1.txt
+#
+# ⚠️ litellm tire une fermeture transitive lourde (openai, tokenizers, tiktoken,
+#    aiohttp…). Le lock complet est généré dans requirements-phase1.lock.txt.
+
+langgraph==1.2.12
+litellm==1.103.2
+pydantic==2.13.5
