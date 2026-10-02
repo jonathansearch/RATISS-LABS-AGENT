@@ -40,7 +40,7 @@ Correspondance avec la feuille de route du brief :
 - **Objectif :** figer les 6 schémas avant toute installation.
 - **S'appuyer sur :**
   - la spécification MCP (`modelcontextprotocol/modelcontextprotocol`) pour le schéma **Tool** (nom, description, inputSchema) ;
-  - CloudEvents (`cloudevents/spec`) pour **Event** (id, source, type, time, data) ;
+  - CloudEvents (`cloudevents/spec`) pour **Event** (id, source, type, time, data), avec l'extension CloudEvents de traçage distribué (`traceparent`, `tracestate`) pour la corrélation OpenTelemetry demandée par le brief ;
   - le format SKILL.md (`anthropics/skills`, skills Apache-2.0 seulement) pour **Skill** ;
   - le §32 du brief et RATISS-Framework pour **Run** (manifest + hashes).
 - **À produire (par GLM) :**
@@ -48,7 +48,7 @@ Correspondance avec la feuille de route du brief :
   - `tools.yaml` et `skills.yaml` (registres) ;
   - une politique de départ : lecture = ALLOW ; écriture et réseau = REQUIRE_APPROVAL ; suppression, push et cyber actif = DENY par défaut.
 - **Versions :** utiliser celles de `VERSIONS.md` (Python 3.12, Node ≥ 22.19).
-- **Schéma Skill :** reprendre la spécification Agent Skills suivie par deepagents : `name` ≤ 64 caractères (minuscules et tirets), `description` ≤ 1024, et en option `license`, `compatibility`, `metadata`, `allowed_tools`. Ajouter un champ RATISS : `sha256`.
+- **Schéma Skill :** reprendre la spécification Agent Skills suivie par deepagents : `name` ≤ 64 caractères (minuscules et tirets), `description` ≤ 1024, et en option `license`, `compatibility`, `metadata`, `allowed-tools` (orthographe de la spécification agentskills.io ; la doc deepagents écrit `allowed_tools` → vérifier au montage). Champs RATISS dans un bloc `x-ratiss` (dont `sha256`).
 - ✅ **Contrôle :** chaque schéma est validé sur 1 exemple réel, et le fichier des versions est scellé en SHA-256.
 
 ## ÉTAPE 1 — Socle
