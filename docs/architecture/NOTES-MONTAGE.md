@@ -3,23 +3,34 @@
 Ces points ne bloquent pas la Phase 0 (contrats). Ils sont à confirmer **au
 montage**, quand les briques seront réellement installées.
 
-## 1. `allowed-tools` (spécification) vs `allowed_tools` (documentation deepagents)
+## 1. `allowed-tools` : le contrat est strict, la tolérance ira dans le chargeur
 
-La spécification Agent Skills écrit **`allowed-tools`** (tiret). La
-documentation et `MONTAGE.md` écrivent **`allowed_tools`** (underscore).
+Décision actée : le contrat `skill.schema.json` n'accepte que **`allowed-tools`**
+(orthographe de la spécification Agent Skills). L'alias `allowed_tools` a été
+**retiré** : accepter les deux orthographes permettrait à un même skill d'avoir
+deux noms différents pour le même champ.
 
-→ **À vérifier** : quel nom exact deepagents lit-il dans le frontmatter d'un
-`SKILL.md` ?
+Arena a corrigé ses documents sur `main` (`71d2722`) : `COMPATIBILITE.md` et
+`MONTAGE.md` écrivent désormais `allowed-tools`.
 
-En attendant, le contrat `skill.schema.json` **accepte les deux** :
+→ **À vérifier au montage** : quel nom exact deepagents lit-il dans le
+frontmatter d'un `SKILL.md` ? **Si** il lit `allowed_tools`, la tolérance sera
+ajoutée **dans le chargeur**, pas dans le contrat — et seulement si un test le
+montre nécessaire.
 
-- `allowed-tools` — champ de premier niveau (spec) ;
-- `x-ratiss.allowed_tools` — alias (orthographe de `MONTAGE.md`).
+## 2. Corrélation OpenTelemetry : `traceparent` / `tracestate`
 
-Le test `test_skill_allowed_tools_deux_orthographes` couvre les deux cas. Quand
-la réponse sera connue, on pourra retirer l'alias s'il est inutile.
+Décision actée : l'enveloppe des événements suit **CloudEvents**, et la
+corrélation **OpenTelemetry** passe par l'**extension CloudEvents de traçage
+distribué** (`traceparent`, `tracestate`), qui embarque le contexte W3C
+Trace Context. Les deux exigences du brief et de `MONTAGE.md` sont donc
+satisfaites sans contradiction.
 
-## 2. Attributs d'extension CloudEvents
+Le contrat expose `traceparent` (chaîne non vide) et `tracestate` (optionnel) à
+la racine de l'événement. Les anciens champs `trace_id` et `span_id` ont été
+**retirés** : ils faisaient doublon avec `traceparent`.
+
+## 3. Attributs d'extension CloudEvents
 
 Le contrat `event.schema.json` accepte tout attribut dont le nom est en
 **minuscules et chiffres** (`patternProperties`), conformément à CloudEvents.
@@ -27,7 +38,7 @@ Conséquence assumée : un ancien champ comme `horodatage` est **accepté** (il 
 traité comme un attribut d'extension). La protection vient du fait que les
 consommateurs lisent `time`, pas `horodatage`.
 
-## 3. `inputSchema` MCP
+## 4. `inputSchema` MCP
 
 Le contrat `tool.schema.json` reprend `name`, `description`, `inputSchema`,
 `outputSchema` et `annotations` de la spécification MCP. `outputSchema` et

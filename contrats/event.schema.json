@@ -54,6 +54,15 @@
       "format": "uri",
       "description": "Schéma de `data` (CloudEvents)."
     },
+    "traceparent": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Extension CloudEvents de traçage distribué (W3C Trace Context) : version-traceid-spanid-flags. Porte la corrélation OpenTelemetry."
+    },
+    "tracestate": {
+      "type": "string",
+      "description": "Extension CloudEvents de traçage distribué (W3C Trace Context), optionnelle."
+    },
     "data": {
       "description": "Charge utile de l'événement (CloudEvents) : tout type JSON (objet, chaîne, nombre…)."
     },
@@ -86,12 +95,6 @@
           "type": "integer",
           "minimum": 0,
           "description": "Numéro de séquence interne."
-        },
-        "trace_id": {
-          "type": "string"
-        },
-        "span_id": {
-          "type": "string"
         },
         "sha256": {
           "type": "string",

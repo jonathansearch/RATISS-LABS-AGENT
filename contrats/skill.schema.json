@@ -80,10 +80,6 @@
           "items": {
             "type": "string"
           }
-        },
-        "allowed_tools": {
-          "type": "string",
-          "description": "Alias de `allowed-tools` (orthographe employée dans MONTAGE.md)."
         }
       }
     }

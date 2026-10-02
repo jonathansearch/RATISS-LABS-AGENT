@@ -256,15 +256,48 @@ def test_skill_sha256_dans_x_ratiss_accepte() -> None:
     assert not validateur.is_valid(skill)
 
 
-def test_skill_allowed_tools_deux_orthographes() -> None:
-    """`allowed-tools` (spec) et son alias `allowed_tools` (x-ratiss) sont acceptés."""
+def test_skill_allowed_tools_seul_accepte() -> None:
+    """`allowed-tools` (orthographe de la spécification) est le seul nom accepté."""
     validateur = _validateur("skill.schema.json")
     skill = _skill_base()
     skill["allowed-tools"] = "Read Write"
     assert validateur.is_valid(skill)
+
+
+def test_skill_alias_allowed_tools_refuse() -> None:
+    """Doublon refusé : l'alias `allowed_tools` n'existe nulle part (règle n° 3)."""
+    validateur = _validateur("skill.schema.json")
+    skill = _skill_base()
+    skill["allowed_tools"] = "Read Write"
+    assert not validateur.is_valid(skill)
     skill = _skill_base()
     skill["x-ratiss"]["allowed_tools"] = "Read Write"
-    assert validateur.is_valid(skill)
+    assert not validateur.is_valid(skill)
+
+
+def test_skill_nom_a_la_racine_refuse() -> None:
+    """Doublon refusé : `nom` est supprimé, seul `name` existe."""
+    validateur = _validateur("skill.schema.json")
+    skill = _skill_base()
+    skill["nom"] = "recherche-arxiv"
+    assert not validateur.is_valid(skill)
+
+
+def test_skill_licence_a_la_racine_refusee() -> None:
+    """Doublon refusé : `licence` est supprimé, seul `license` existe."""
+    validateur = _validateur("skill.schema.json")
+    skill = _skill_base()
+    skill["licence"] = "Apache-2.0"
+    assert not validateur.is_valid(skill)
+
+
+def test_skill_aucune_retrocompatibilite() -> None:
+    """Rien n'est en production : les anciens champs RATISS ne sont plus tolérés à la racine."""
+    validateur = _validateur("skill.schema.json")
+    for ancien in ("nom", "declencheurs", "niveau_chargement", "source", "version", "licence"):
+        skill = _skill_base()
+        skill[ancien] = "x"
+        assert not validateur.is_valid(skill), f"{ancien!r} ne doit plus être accepté à la racine"
 
 
 # --------------------------------------------------------------------------
@@ -366,6 +399,32 @@ def test_event_run_id_requis_dans_x_ratiss() -> None:
     evenement = _charger(EXEMPLES / "event.exemple.json")
     evenement["x-ratiss"].pop("run_id")
     assert not validateur.is_valid(evenement)
+
+
+def test_event_traceparent_accepte() -> None:
+    """L'extension CloudEvents de traçage distribué (corrélation OTel) est acceptée."""
+    validateur = _validateur("event.schema.json")
+    evenement = _charger(EXEMPLES / "event.exemple.json")
+    evenement["traceparent"] = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+    evenement["tracestate"] = "congo=t61rcWkgMzE"
+    assert not _erreurs(validateur, evenement), "\n".join(_erreurs(validateur, evenement))
+
+
+def test_event_traceparent_vide_refuse() -> None:
+    """`traceparent` doit être une chaîne non vide (spec de l'extension)."""
+    validateur = _validateur("event.schema.json")
+    evenement = _charger(EXEMPLES / "event.exemple.json")
+    evenement["traceparent"] = ""
+    assert not validateur.is_valid(evenement)
+
+
+def test_event_trace_id_dans_x_ratiss_refuse() -> None:
+    """Doublon refusé : `trace_id`/`span_id` sont remplacés par `traceparent`."""
+    validateur = _validateur("event.schema.json")
+    for ancien in ("trace_id", "span_id"):
+        evenement = _charger(EXEMPLES / "event.exemple.json")
+        evenement["x-ratiss"][ancien] = "x"
+        assert not validateur.is_valid(evenement), f"{ancien!r} doit être refusé"
 
 
 def test_event_attribut_minuscule_traite_comme_extension() -> None:

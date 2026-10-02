@@ -4,6 +4,7 @@
   "source": "/ratiss/runtime",
   "type": "outil_appele",
   "time": "2026-10-02T14:47:02Z",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
   "data": {
     "outil": "read_file",
     "entrees": {
@@ -13,8 +14,6 @@
   "x-ratiss": {
     "run_id": "run-demo-001",
     "task_id": "t1-lire-catalogue",
-    "actor": "execution_plane",
-    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
-    "span_id": "00f067aa0ba902b7"
+    "actor": "execution_plane"
   }
 }

@@ -54,10 +54,21 @@ Cybersecurity-Skills et diagram-design.
 - champs **standards en anglais**, exactement comme la spécification de référence ;
 - extensions RATISS regroupées dans un **bloc unique `x-ratiss`** ;
 - `additionalProperties: false` à la racine ;
-- **aucun doublon** : `name` seul (pas de `nom`), `license` seule (pas de `licence`) ;
+- **aucun doublon** (règle n° 3) : `name` seul (`nom` supprimé), `license` seule
+  (`licence` supprimé), `allowed-tools` seul (alias `allowed_tools` supprimé) ;
+- **aucune rétrocompatibilité** : rien n'est en production, la PR #1 n'est pas
+  fusionnée. Les tolérances iront dans le **chargeur**, au montage, et seulement
+  si un test le montre nécessaire ;
 - **exception `Event`** : CloudEvents autorise les attributs d'extension
   (minuscules et chiffres), acceptés par `patternProperties` ;
 - `Task`, `Run`, `Policy` : pas de standard externe, champs conservés mais en anglais.
+
+### Corrélation OpenTelemetry
+
+L'enveloppe suit **CloudEvents** ; la corrélation **OpenTelemetry** passe par
+l'**extension CloudEvents de traçage distribué** : `traceparent` (requis non
+vide) et `tracestate` (optionnel). `trace_id`/`span_id` ont été supprimés
+(doublon). Les deux exigences du brief et de `MONTAGE.md` sont satisfaites.
 
 ## 6. Contenu de la PR
 
@@ -65,12 +76,12 @@ Cybersecurity-Skills et diagram-design.
 |---|---|
 | `skill.schema.json` | aligné Agent Skills + `x-ratiss` |
 | `tool.schema.json` | aligné MCP (`name`, `description`, `inputSchema`, `outputSchema`, `annotations`) + `x-ratiss` |
-| `event.schema.json` | aligné CloudEvents + attributs d'extension + `x-ratiss` |
+| `event.schema.json` | aligné CloudEvents + attributs d'extension + `traceparent`/`tracestate` + `x-ratiss` |
 | `task`, `run`, `policy` | champs renommés en anglais |
 | 6 exemples | mis à jour |
 | `docker-compose.yml` | `127.0.0.1:${POSTGRES_PORT:-5432}:5432` |
 | `docs/architecture/LICENCES-VERIFICATION.md` | décision MPL-2.0 consignée |
-| `docs/architecture/NOTES-MONTAGE.md` | `allowed-tools` vs `allowed_tools` à vérifier |
+| `docs/architecture/NOTES-MONTAGE.md` | `allowed-tools` strict ; tolérance dans le chargeur |
 
 ## 7. Tests (4 demandés + garde-fous)
 
@@ -78,7 +89,8 @@ Cybersecurity-Skills et diagram-design.
 2. ✅ un vrai événement CloudEvents accepté (exemple officiel de la spec) ;
 3. ✅ une vraie définition d'outil MCP (`tools/list`) acceptée ;
 4. ✅ un champ inconnu refusé ;
-5. ✅ les limites de taille testées (`name` ≤ 64, `description` ≤ 1024,
+5. ✅ un **doublon** refusé (`nom`, `licence`, `allowed_tools`, `trace_id`) ;
+6. ✅ les limites de taille testées (`name` ≤ 64, `description` ≤ 1024,
    `compatibility` ≤ 500).
 
 ## 8. Limites assumées
