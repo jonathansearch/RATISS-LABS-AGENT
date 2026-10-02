@@ -4,28 +4,34 @@ Agent de RATISS Labs **assemblé** à partir de briques open source existantes, 
 
 📄 Architecture de référence : le brief `agentmd.txt` (control plane / execution plane, Tool / Skill / MCP Server séparés, Policy ALLOW / DENY / REQUIRE_APPROVAL, provenance hashée).
 
-> **Statut : phase de recensement.** Ce dépôt ne contient encore **aucun code**. Il réunit les liens vérifiés des briques à assembler. La construction se fera avec GLM.
+> **Statut : recensement terminé (campagne du 02/10/2026).** Aucun code. Le montage se fera avec GLM en suivant `MONTAGE.md`.
 
 ## 📂 Contenu
-- **`CATALOGUE.md`** : 69 dépôts classés par composant, avec statut, licence et rôle.
-- **`LIENS.csv`** : les mêmes données en format machine.
-
-## 🧩 Assemblage V1 proposé (brief §47)
-
-| Brique du brief | Dépôt choisi pour la V1 |
+| Fichier | Rôle |
 |---|---|
-| UI (Chat) | Open WebUI en banc d'essai, puis assistant-ui (UI maison) |
-| API + Agent Runtime (router, planner, executor, approvals) | LangGraph (+ deepagents) ; interruptions = approbation humaine |
-| Model Gateway | LiteLLM → GLM / Claude / Ollama (local) |
-| MCP Gateway + tool registry | IBM mcp-context-forge (ou docker/mcp-gateway) |
-| Contrat MCP | spécification + python-sdk + FastMCP (serveurs RATISS maison) |
-| Outils MCP | servers (filesystem, git, fetch), github-mcp-server, playwright-mcp, jupyter-mcp-server, arxiv-mcp-server |
-| Policy Engine | OPA ; scan d'admission avec snyk/agent-scan |
-| Sandboxes (Python / Browser / Repository) | E2B + gVisor, browser-use |
-| Mémoire (conversation, tâches, documentaire) | PostgreSQL + pgvector, claude-mem |
-| Vérification / provenance | **RATISS-Framework** (SHA-256, journal) + Langfuse / OpenTelemetry |
-| Skills (chargement progressif) | format anthropics/skills ; K-Dense (science), Cybersecurity-Skills, diagram-design |
-| Stockage objet | SeaweedFS |
+| **`MONTAGE.md`** | ⭐ **Le workflow de montage** : 12 étapes, chacune avec ses briques, son montage et son contrôle de passage |
+| `CATALOGUE.md` | 84 dépôts vérifiés, classés par composant, plus la liste des dépôts écartés et renommés |
+| `COMPATIBILITE.md` | Fiche technique et matrice des jonctions, avec la source de chaque affirmation (README / DOC / DÉDUIT) |
+| `LICENCES.md` | Licences lues dans les fichiers LICENSE et leurs conséquences |
+| `SOURCES.md` | Méthode et sources web de la campagne |
+| `LIENS.csv` | Données en format machine |
+
+## 🧩 Pile V1 retenue
+
+| Brique du brief | Dépôt |
+|---|---|
+| UI | Open WebUI (banc d'essai), puis assistant-ui |
+| Runtime (router, planner, executor, approbations) | LangGraph + deepagents + `langchain.mcp` |
+| Model Gateway | LiteLLM (+ Ollama) |
+| MCP Gateway + registre | IBM ContextForge (serveur virtuel « ratiss-v1 ») |
+| Admission MCP | Cisco mcp-scanner (hors ligne) + MCP Inspector + hash dans `tools.yaml` |
+| Policy | OPA, appelé par le runtime avant chaque outil |
+| Outils MCP | filesystem, git, github, playwright, jupyter, arxiv, postgres ; cyber : mcp-security-hub |
+| Sandboxes | llm-sandbox + gVisor, playwright-mcp, browser-use |
+| Mémoire | PostgreSQL + pgvector + checkpoints LangGraph |
+| Vérification | **RATISS-Framework** (SHA-256, journal, manifest de run) |
+| Skills | format SKILL.md + K-Dense, Cybersecurity-Skills, diagram-design (10 à 20 skills en V1) |
+| Stockage objet | RustFS |
 
 ## 🗺️ Feuille de route (brief)
 0. Contrat : schémas Tool / Skill / Task / Event / Run / Policy.
