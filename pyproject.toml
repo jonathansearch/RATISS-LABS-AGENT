@@ -1,0 +1,23 @@
+[project]
+name = "ratiss-agent"
+version = "0.1.0"
+description = "RATISS LABS AGENT — noyau Phase 1 (démo mock hors ligne)"
+requires-python = ">=3.11"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Dépendances de la Phase 1 volontairement HORS du socle : elles sont
+# optionnelles et verrouillées dans requirements-phase1.txt (venv isolé).
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
