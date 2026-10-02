@@ -12,6 +12,7 @@ Agent de RATISS Labs **assemblé** à partir de briques open source existantes, 
 | **`MONTAGE.md`** | ⭐ **Le workflow de montage** : 12 étapes, chacune avec ses briques, son montage et son contrôle de passage |
 | `CATALOGUE.md` | 84 dépôts vérifiés, classés par composant, plus la liste des dépôts écartés et renommés |
 | `COMPATIBILITE.md` | Fiche technique et matrice des jonctions, avec la source de chaque affirmation (README / DOC / DÉDUIT) |
+| `VERSIONS.md` | Versions exactes de la pile V1 (Python 3.12, Node ≥ 22.19) |
 | `LICENCES.md` | Licences lues dans les fichiers LICENSE et leurs conséquences |
 | `SOURCES.md` | Méthode et sources web de la campagne |
 | `LIENS.csv` | Données en format machine |

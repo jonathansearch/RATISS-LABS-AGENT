@@ -28,6 +28,20 @@
 | Serveurs MCP cyber — https://github.com/FuzzingLabs/mcp-security-hub | Serveurs MCP offensifs avec docker-compose |
 | Motif d'approbation LangGraph — https://www.permit.io/blog/delegating-ai-permissions-to-human-users-with-permitios-access-request-mcp | `interrupt()` + MCP pour l'approbation humaine |
 
+## Documentation officielle (2e passe : vérification des jonctions)
+
+| Source | Ce qu'elle confirme |
+|---|---|
+| deepagents, Skills — https://docs.langchain.com/oss/python/deepagents/skills | Spécification Agent Skills, SKILL.md, chargement en 3 niveaux |
+| deepagents, Customization — https://docs.langchain.com/oss/python/deepagents/customization | Paramètres `skills=`, `middleware=`, `interrupt_on=`, `permissions=` |
+| Référence du middleware skills — https://reference.langchain.com/python/deepagents/middleware/skills | Limites de `name` et `description`, champs optionnels |
+| LangChain MCP — https://docs.langchain.com/oss/python/langchain/mcp | `MCPAdapter`, transports déduits de la cible |
+| Migration — https://docs.langchain.com/oss/python/migrate/langchain-mcp-adapters | SSE déprécié, élicitation transformée en interrupts |
+| FAQ ContextForge — https://ibm.github.io/mcp-context-forge/faq/ | Recette LangChain, `/mcp`, `/servers/<UUID>/mcp`, Bearer |
+| LiteLLM — https://docs.litellm.ai/docs/providers/openai | `ChatOpenAI` pointé sur le proxy |
+| Installation de gVisor (Read the Docs) — https://docs.readthedocs.com/dev/latest/guides/gvisor.html | `daemon.json`, test `dmesg`, réglage cgroup |
+| PyPI, npm, releases GitHub | Versions et exigences de Python et Node (`VERSIONS.md`) |
+
 ## ⚠️ Contradictions relevées entre le web et les README
 
 - Un article présente **Bifrost** comme passerelle MCP open source. Son README range la passerelle MCP dans l'**offre Enterprise**. → **C'est le README qui fait foi.**

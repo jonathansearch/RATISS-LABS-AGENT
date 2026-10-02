@@ -47,7 +47,8 @@ Correspondance avec la feuille de route du brief :
   - schémas Tool / Skill / Task / Event / Run / Policy ;
   - `tools.yaml` et `skills.yaml` (registres) ;
   - une politique de départ : lecture = ALLOW ; écriture et réseau = REQUIRE_APPROVAL ; suppression, push et cyber actif = DENY par défaut.
-- **Figer les versions :** Python 3.12, et un numéro de version précis pour chaque brique.
+- **Versions :** utiliser celles de `VERSIONS.md` (Python 3.12, Node ≥ 22.19).
+- **Schéma Skill :** reprendre la spécification Agent Skills suivie par deepagents : `name` ≤ 64 caractères (minuscules et tirets), `description` ≤ 1024, et en option `license`, `compatibility`, `metadata`, `allowed_tools`. Ajouter un champ RATISS : `sha256`.
 - ✅ **Contrôle :** chaque schéma est validé sur 1 exemple réel, et le fichier des versions est scellé en SHA-256.
 
 ## ÉTAPE 1 — Socle
@@ -107,7 +108,8 @@ Correspondance avec la feuille de route du brief :
   - `langchain.mcp` (`langchain-ai/langchain` v1.4+, bêta : version figée).
   - ⚠️ **Ne pas utiliser** `langchain-mcp-adapters` : il est archivé.
 - **Montage :**
-  - le runtime voit **un seul** serveur MCP : le serveur virtuel « ratiss-v1 » de ContextForge ;
+  - le runtime voit **un seul** serveur MCP : le serveur virtuel « ratiss-v1 » de ContextForge, à l'adresse `http://mcp-gateway:4444/servers/<UUID>/mcp`, en **Streamable HTTP** avec un jeton Bearer. Côté LangChain, on utilise `MCPAdapter` (pas SSE : déprécié) ;
+- le modèle passe par LiteLLM : `ChatOpenAI` pointé sur `http://llm-gateway:4000` (recette documentée par LiteLLM) ;
   - les modèles passent par LiteLLM ;
   - les checkpoints LangGraph sont stockés dans PostgreSQL (persistance des tâches et reprise après coupure) ;
   - Router, Planner et Executor du brief correspondent au planificateur et aux sous-agents de deepagents.
@@ -119,7 +121,8 @@ Correspondance avec la feuille de route du brief :
 
 - **Briques :** OPA (`open-policy-agent/opa`) et le HITL de deepagents (approve / edit / reject).
 - **Constat :** ContextForge ne fait pas appel à OPA. La décision doit donc être prise **dans le runtime**.
-- **À écrire (par GLM), en court :** avant chaque appel d'outil, le runtime envoie à OPA `{outil, arguments, utilisateur, tâche}` et applique la réponse :
+- **Points d'ancrage officiels de deepagents :** `middleware=` (ajouter un middleware à la pile), `interrupt_on=` (pause avant un appel d'outil) et `permissions=` (droits par chemin sur le filesystem).
+- **À écrire (par GLM), sous forme d'un middleware RATISS :** avant chaque appel d'outil, le runtime envoie à OPA `{outil, arguments, utilisateur, tâche}` et applique la réponse :
   - `ALLOW` → l'appel s'exécute ;
   - `DENY` → l'appel est refusé et journalisé ;
   - `REQUIRE_APPROVAL` → `interrupt()`, l'humain valide, modifie ou rejette.
@@ -133,7 +136,7 @@ Correspondance avec la feuille de route du brief :
 
 - **Python :**
   - llm-sandbox (`vndee/llm-sandbox`) avec son serveur MCP ;
-  - Docker configuré avec le runtime `runsc` de gVisor (`google/gvisor`) ;
+  - Docker configuré avec le runtime `runsc` de gVisor (`google/gvisor`), déclaré dans `/etc/docker/daemon.json` (`runtimes.runsc.path`). Test : `docker run --runtime=runsc … dmesg` doit afficher « Starting gVisor ». Sur systemd, prévoir le réglage du pilote cgroup si besoin ;
   - les notebooks passent par `datalayer/jupyter-mcp-server` et un service JupyterLab dédié.
 - **Browser :**
   - `microsoft/playwright-mcp` pour la navigation outillée ;
@@ -167,7 +170,7 @@ Correspondance avec la feuille de route du brief :
   - format SKILL.md (`anthropics/skills` : copier seulement les skills Apache-2.0, comme `mcp-builder` et `skill-creator`) ;
   - K-Dense (science), Anthropic-Cybersecurity-Skills (cyber), diagram-design (diagrammes).
 - **Règle (brief §46) :** 10 à 20 skills prioritaires, **pas 817**. On sélectionne, chaque skill est hashé et enregistré dans `skills.yaml`.
-- **Chargement :** seuls le nom et la description sont en contexte ; le corps du skill est chargé à la demande (« skills on demand » de deepagents).
+- **Chargement (documenté par deepagents, 3 niveaux) :** ① au démarrage, seuls `name` et `description` entrent dans le contexte ; ② le corps du SKILL.md est lu quand le skill est invoqué ; ③ les fichiers `scripts/`, `references/` et `assets/` sont lus seulement si les instructions les demandent. Corps conseillé : < 5 000 tokens. Montage : `skills=["./skills/"]`.
 - **Admission :** les skills passent aussi au scan (Snyk agent-scan sait scanner les skills).
 - ✅ **Contrôle :**
   - le contexte de départ reste petit ;
