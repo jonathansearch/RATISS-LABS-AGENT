@@ -1,21 +1,39 @@
-# RATISS LABS AGENT — stack locale minimale (Phase 0)
-# Objectif : une seule base PostgreSQL + pgvector pour la mémoire (V1).
-# Aucun secret en clair : tout passe par un fichier .env non versionné.
+# RATISS LABS AGENT — socle (MONTAGE.md étape 1) + Model Gateway (étape 2)
+# + MCP Gateway et outils de base (étape 3).
+# Services : postgres (pgvector) + redis + objects (RustFS) + llm-gateway (LiteLLM)
+# + ollama (profil local) + mcp-gateway (ContextForge) + 4 ponts stdio + github (profil github).
+# Réseaux : core (interne) / tools (outils, sans internet) / tools-out (internet,
+# exceptions explicites uniquement) / edge (UI et API seulement).
+#
+# Règles respectées :
+#   - images épinglées par tag EXACT + digest SHA-256 (relevés sur Docker Hub le 03/10/2026) ; jamais de `latest` ;
+#   - aucun secret en clair : tout passe par .env (copie de .env.example) ; les mots de passe sont obligatoires (:?erreur) ;
+#   - ports publiés liés à 127.0.0.1 uniquement (administration depuis l'hôte) ;
+#     les conteneurs se joignent entre eux par DNS du réseau core (postgres:5432, redis:6379, objects:9000) ;
+#   - internet = EXCEPTION EXPLICITE, jamais silencieuse :
+#       llm-gateway  (étape B) -> fournisseurs modèles (réseau edge) ;
+#       ollama       (profil local) -> tirage des modèles (réseau edge) ;
+#       mcp-fetch, mcp-arxiv, mcp-github (étape C) -> réseaux tools + tools-out.
 
 services:
   postgres:
-    image: pgvector/pgvector:pg16
+    # PostgreSQL 16 + extension pgvector (mémoire, checkpoints LangGraph, événements).
+    # Digest relevé le 03/10/2026 (tag pg16 = 0.8.7-pg16 à la date du relevé).
+    image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
     container_name: ratiss-postgres
     restart: unless-stopped
+    networks:
+      - core
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-ratiss}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?definir POSTGRES_PASSWORD dans .env}
       POSTGRES_DB: ${POSTGRES_DB:-ratiss}
     ports:
-      # Lié à la boucle locale uniquement : la base n'est pas exposée au réseau.
+      # Administration depuis l'hôte uniquement ; jamais exposé au LAN.
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - ratiss_pgdata:/var/lib/postgresql/data
+      # sql/init/001_pgvector.sql : crée l'extension vector au premier démarrage.
       - ./sql/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ratiss} -d ${POSTGRES_DB:-ratiss}"]
@@ -23,5 +41,304 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    # Redis 7.4 : requis par ContextForge (étape C) et utile à LiteLLM (étape B).
+    # Version non figée dans VERSIONS.md au 02/10 -> choix proposé : 7.4-alpine (branche stable 7.4),
+    # à valider par le chef ; le digest épinglé garantit la reproductibilité quoi qu'il décide.
+    # Digest relevé le 03/10/2026 (tag 7.4-alpine = 7.4.11-alpine à la date du relevé).
+    image: redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+    container_name: ratiss-redis
+    restart: unless-stopped
+    networks:
+      - core
+    # AOF activé : l'état que ContextForge/LiteLLM déposent dans Redis survit au redémarrage.
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - ratiss_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  objects:
+    # RustFS 1.0.0 (VERSIONS.md) : stockage objet S3 des artefacts.
+    # Healthcheck = healthcheck officiel du projet RustFS simplifié (HTTP local, pas de TLS en V1 locale).
+    # Digest relevé le 03/10/2026. Ports : 9000 = API S3, 9001 = console web.
+    image: rustfs/rustfs:1.0.0@sha256:8cc9801755448b71a786705ce76692c77e14936cccd87cf2fc31842e58f4d1ff
+    container_name: ratiss-objects
+    restart: unless-stopped
+    security_opt:
+      - "no-new-privileges:true"
+    networks:
+      - core
+    environment:
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:?definir RUSTFS_ACCESS_KEY dans .env}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:?definir RUSTFS_SECRET_KEY dans .env}
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
+      RUSTFS_CONSOLE_ENABLE: "true"
+      # Volume unique pour V1 mono-opérateur (le compose officiel RustFS montre la topologie multi-volumes, hors besoin ici).
+      RUSTFS_VOLUMES: /data
+    ports:
+      - "127.0.0.1:${RUSTFS_API_PORT:-9000}:9000"
+      - "127.0.0.1:${RUSTFS_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - ratiss_objects_data:/data
+      - ratiss_objects_logs:/logs
+    healthcheck:
+      test:
+        [
+          "CMD", "sh", "-ec",
+          "curl -fsS http://127.0.0.1:9000/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  llm-gateway:
+    # Model Gateway (ÉTAPE B) : LiteLLM proxy 1.103.2 EXACT (le tag Docker
+    # main-v1.103.2 n'existe pas au 03/10/2026 -> image construite depuis PyPI,
+    # version verrouillée, voir docker/llm-gateway.Dockerfile).
+    build:
+      context: .
+      dockerfile: docker/llm-gateway.Dockerfile
+    image: ratiss-llm-gateway:1.103.2
+    container_name: ratiss-llm-gateway
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      # core : joignable par le runtime et le socle ; postgres pour le budget persistant.
+      - core
+      # edge : EXCEPTION EXPLICITE documentée (PROMPT étape A) — le gateway doit
+      # joindre les fournisseurs externes (GLM/DeepSeek). Aucun autre service
+      # du réseau core n'a d'accès internet.
+      - edge
+    environment:
+      # Auth obligatoire du proxy (BYOK) — valeur factice dans .env.example.
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?definir LITELLM_MASTER_KEY dans .env}
+      # Clés fournisseurs — absentes => les alias correspondants échouent fermé.
+      GLM_API_KEY: ${GLM_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      # Plafond de coût mensuel (défaut 10 USD, proposition à confirmer par le chef).
+      RATISS_BUDGET_USD: ${RATISS_BUDGET_USD:-10}
+      # Budget persistant : le proxy stocke ses tables LiteLLM_* dans le PostgreSQL du socle A.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ratiss}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ratiss}
+    ports:
+      # Administration/tests depuis l'hôte uniquement.
+      - "127.0.0.1:${LITELLM_PORT:-4000}:4000"
+    volumes:
+      - ./config/litellm.yaml:/app/config/litellm.yaml:ro
+
+  ollama:
+    # Option locale (aucun coût) : ne démarre QUE avec le profil "local"
+    # (`docker compose --profile local up -d`). Modèle à tirer au premier usage.
+    image: ollama/ollama:0.35.1@sha256:292ee7945dfc3d5840a181f3ab86fedb1e66703e02c8af98b50f4da56b7e278c
+    container_name: ratiss-ollama
+    restart: unless-stopped
+    profiles:
+      - local
+    networks:
+      - core
+      # edge : EXCEPTION EXPLICITE — ollama doit télécharger ses modèles depuis
+      # registry.ollama.com au premier usage (`ollama pull`). Une fois les modèles
+      # en volume, ce réseau peut être retiré par décision du chef.
+      - edge
+    ports:
+      - "127.0.0.1:${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ratiss_ollama:/root/.ollama
+
+  mcp-gateway:
+    # ÉTAPE C — la porte unique des outils (MONTAGE étape 3) :
+    # ContextForge 1.0.11 (VERSIONS.md) sur le PostgreSQL + Redis de l'étape A.
+    # Tag vérifié en direct le 03/10/2026 : le tag publié est `v1.0.11` (avec
+    # préfixe v) ; digest relevé sur ghcr.io à la même date.
+    image: ghcr.io/ibm/mcp-context-forge:v1.0.11@sha256:e9639c030162d6cb2f9f188600dd69af8091ec62a7ce307d4a74f4d4f86873df
+    container_name: ratiss-mcp-gateway
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      # core : PostgreSQL (catalogue) + Redis (cache/états).
+      - core
+      # tools : atteindre les ponts stdio (mcp-filesystem, mcp-git, etc.).
+      # AUCUN accès internet pour le gateway lui-même.
+      - tools
+    environment:
+      # Catalogue sur le PostgreSQL du socle (pas de SQLite en V1 RATISS).
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ratiss}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ratiss}
+      # Cache/états sur le Redis du socle.
+      REDIS_URL: redis://redis:6379/0
+      CACHE_TYPE: redis
+      # Secrets JWT/chiffrement OBLIGATOIRES (l'image rejette les placeholders) —
+      # générer avec : python -m mcpgateway.scripts.init_secrets --stdout
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?definir JWT_SECRET_KEY dans .env}
+      AUTH_ENCRYPTION_SECRET: ${AUTH_ENCRYPTION_SECRET:?definir AUTH_ENCRYPTION_SECRET dans .env}
+      # Admin plateforme (bootstrap au premier démarrage) : utilisé par
+      # scripts/enregistrer_outils.py via POST /auth/email/login.
+      PLATFORM_ADMIN_EMAIL: ${CONTEXTFORGE_ADMIN_EMAIL:?definir CONTEXTFORGE_ADMIN_EMAIL dans .env}
+      PLATFORM_ADMIN_PASSWORD: ${CONTEXTFORGE_ADMIN_PASSWORD:?definir CONTEXTFORGE_ADMIN_PASSWORD dans .env}
+      # UI admin désactivée (surface minimale) ; API admin ACTIVÉE car
+      # scripts/enregistrer_outils.py en dépend (défaut 1.0.11 = false).
+      MCPGATEWAY_UI_ENABLED: "false"
+      MCPGATEWAY_ADMIN_API_ENABLED: "true"
+    ports:
+      # Administration/enregistrement depuis l'hôte uniquement.
+      - "127.0.0.1:${MCPGATEWAY_PORT:-4444}:4444"
+    # Healthcheck : celui EMBARQUÉ dans l'image officielle (/health via httpx,
+    # conteneur non root user 10001) — rien à redéfinir ici.
+
+  mcp-filesystem:
+    # Pont stdio -> Streamable HTTP du serveur filesystem officiel, LIMITÉ au
+    # volume /workspace (jamais le disque entier — règle MONTAGE étape 3).
+    build:
+      context: .
+      dockerfile: docker/mcp-tools.Dockerfile
+    image: ratiss-mcp-tools:1.0.11
+    container_name: ratiss-mcp-filesystem
+    restart: unless-stopped
+    command:
+      ["python", "-m", "mcpgateway.translate", "--stdio",
+       "mcp-server-filesystem /workspace",
+       "--expose-streamable-http", "--host", "0.0.0.0", "--port", "9101"]
+    networks:
+      - tools
+    volumes:
+      - ratiss_workspace:/workspace
+    security_opt:
+      - "no-new-privileges:true"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket,sys; s=socket.create_connection(('127.0.0.1',9101),3); s.close(); sys.exit(0)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  mcp-git:
+    # Pont du serveur git officiel (PyPI mcp-server-git), dépôt limité à /workspace.
+    image: ratiss-mcp-tools:1.0.11
+    container_name: ratiss-mcp-git
+    restart: unless-stopped
+    command:
+      ["python", "-m", "mcpgateway.translate", "--stdio",
+       "mcp-server-git --repository /workspace",
+       "--expose-streamable-http", "--host", "0.0.0.0", "--port", "9102"]
+    networks:
+      - tools
+    volumes:
+      - ratiss_workspace:/workspace
+    security_opt:
+      - "no-new-privileges:true"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket,sys; s=socket.create_connection(('127.0.0.1',9102),3); s.close(); sys.exit(0)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  mcp-fetch:
+    # Pont du serveur fetch officiel. EXCEPTION EXPLICITE d'internet
+    # (tools-out) : son rôle est de récupérer des pages publiques.
+    image: ratiss-mcp-tools:1.0.11
+    container_name: ratiss-mcp-fetch
+    restart: unless-stopped
+    command:
+      ["python", "-m", "mcpgateway.translate", "--stdio",
+       "mcp-server-fetch",
+       "--expose-streamable-http", "--host", "0.0.0.0", "--port", "9103"]
+    networks:
+      - tools
+      - tools-out
+    security_opt:
+      - "no-new-privileges:true"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket,sys; s=socket.create_connection(('127.0.0.1',9103),3); s.close(); sys.exit(0)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  mcp-arxiv:
+    # Pont de arxiv-mcp-server 0.7.3 (VERSIONS.md). EXCEPTION EXPLICITE
+    # d'internet (tools-out) : arxiv.org. Les PDF téléchargés vont dans
+    # /workspace/arxiv (volume partagé), jamais en dehors.
+    image: ratiss-mcp-tools:1.0.11
+    container_name: ratiss-mcp-arxiv
+    restart: unless-stopped
+    command:
+      ["python", "-m", "mcpgateway.translate", "--stdio",
+       "arxiv-mcp-server --storage-path /workspace/arxiv",
+       "--expose-streamable-http", "--host", "0.0.0.0", "--port", "9104"]
+    networks:
+      - tools
+      - tools-out
+    volumes:
+      - ratiss_workspace:/workspace
+    security_opt:
+      - "no-new-privileges:true"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket,sys; s=socket.create_connection(('127.0.0.1',9104),3); s.close(); sys.exit(0)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  mcp-github:
+    # github-mcp-server v1.14.0 (VERSIONS.md) — transport HTTP natif
+    # (`github-mcp-server http`, Streamable HTTP via le SDK Go officiel,
+    # port par défaut 8082, vérifié dans le code source du tag v1.14.0).
+    # OPTIONNEL : ne démarre QUE si le profil "github" est activé
+    # (mettre COMPOSE_PROFILES=github dans .env quand GITHUB_TOKEN est
+    # renseigné). Sans jeton le serveur refuse de démarrer (comportement
+    # vérifié) — d'où le profil, pas d'échec en boucle.
+    image: ghcr.io/github/github-mcp-server:v1.14.0@sha256:7aaeeec9ae4fe9a736d100c1ff0798f3c219b5009e05f5d3945fcacb13cc196b
+    container_name: ratiss-mcp-github
+    restart: unless-stopped
+    profiles:
+      - github
+    command: ["http", "--port", "8082"]
+    environment:
+      # Jeton lu depuis .env (jamais en dur). Sert d'identité API GitHub ET
+      # d'authentification Bearer entrante (le serveur répond 401 sans).
+      GITHUB_PERSONAL_ACCESS_TOKEN: ${GITHUB_TOKEN:?mettre GITHUB_TOKEN dans .env avant d'activer le profil github}
+    networks:
+      - tools
+      # EXCEPTION EXPLICITE d'internet : api.github.com.
+      - tools-out
+    security_opt:
+      - "no-new-privileges:true"
+
+networks:
+  # Interne : aucun accès internet depuis ce réseau. Les services de base n'en ont pas besoin.
+  core:
+    internal: true
+  # Outils (ponts MCP, gateway, futures sandboxes) : sans internet.
+  tools:
+    internal: true
+  # EXCEPTION EXPLICITE (étape C) : internet sortant pour 3 outils qui en ont
+  # besoin (fetch: pages publiques, arxiv: arxiv.org, github: api.github.com).
+  # Seuls ces 3 services y sont attachés ; rien d'autre ne doit y être ajouté
+  # sans justification en PR.
+  tools-out:
+    internal: false
+  # UI et API seulement (étape J). Non attaché à ce stade ; déclaré pour verrouiller la topologie.
+  edge:
+
 volumes:
   ratiss_pgdata:
+  ratiss_redisdata:
+  ratiss_objects_data:
+  ratiss_objects_logs:
+  ratiss_ollama:
+  # Espace de travail partagé de l'agent (étape C) : SEUL dossier vu par les
+  # outils filesystem/git (jamais le disque entier — règle MONTAGE étape 3).
+  ratiss_workspace:

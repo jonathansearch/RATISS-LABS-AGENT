@@ -1,0 +1,52 @@
+# RATISS LABS AGENT — Model Gateway (ÉTAPE B, PROMPT GLM)
+# Un seul point d'entrée pour tous les modèles. Syntaxe vérifiée à la source
+# officielle (BerriAI/litellm : proxy_server_config.yaml, 02/10/2026) :
+#   - `os.environ/NOM` = lecture depuis l'environnement (jamais de clé en dur ici) ;
+#   - `litellm_settings.max_budget` + `budget_duration` = plafond de coût du proxy ;
+#   - `general_settings.master_key` = auth obligatoire du proxy (BYOK).
+# Ce fichier NE CONTIENT AUCUN SECRET : les clés vivent dans .env (hors git).
+
+model_list:
+  # Alias principal : GLM via le routeur natif Z.AI de LiteLLM.
+  # Modèle ajustable en éditant cette ligne (défaut proposé : glm-4.6).
+  - model_name: ratiss-principal
+    litellm_params:
+      model: zai/glm-4.6
+      api_key: os.environ/GLM_API_KEY
+
+  # Alias de secours : DeepSeek (routeur natif LiteLLM).
+  - model_name: ratiss-secours
+    litellm_params:
+      model: deepseek/deepseek-chat
+      api_key: os.environ/DEEPSEEK_API_KEY
+
+  # Alias local : Ollama (option, aucun coût). Le service `ollama` du compose
+  # ne démarre qu'avec le profil Docker "local" (`docker compose --profile local up`).
+  # Modèle à tirer au premier usage (ex: docker compose exec ollama ollama pull llama3.2).
+  - model_name: ratiss-local
+    litellm_params:
+      model: ollama/llama3.2
+      api_base: http://ollama:11434
+
+litellm_settings:
+  # Plafond de coût mensuel : au-delà, le proxy REFUSE les appels.
+  # Valeur fournie par .env (RATISS_BUDGET_USD, défaut 10 USD — proposition à confirmer par le chef).
+  # Point de contrôle au premier up (contrôle chef « budget 0 ») : RATISS_BUDGET_USD=0
+  # doit rendre tout appel refusé.
+  max_budget: os.environ/RATISS_BUDGET_USD
+  budget_duration: 30d
+
+  # Règle RATISS : aucun prompt ni réponse dans les logs du proxy.
+  turn_off_message_logging: True
+
+  drop_params: True
+
+general_settings:
+  # Auth OBLIGATOIRE du proxy. Le runtime RATISS utilise cette même clé
+  # (lue depuis son propre environnement au moment de l'appel — jamais dans le code,
+  # jamais dans l'état LangGraph, jamais dans les événements).
+  master_key: os.environ/LITELLM_MASTER_KEY
+
+  # Persistance des budgets/clés virtuelles dans PostgreSQL (service postgres du socle A) :
+  # le plafond mensuel survit aux redémarrages. LiteLLM crée ses propres tables LiteLLM_*.
+  store_model_in_db: True

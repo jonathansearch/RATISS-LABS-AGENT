@@ -1,23 +1,32 @@
-"""Adaptateur de modèle (Phase 1) — mock déterministe + LiteLLM désactivé.
+"""Adaptateur de modèle (Phase 1 + ÉTAPE B) — mock déterministe + proxy LiteLLM.
 
 Deux implémentations derrière une même interface :
 
 - `ModeleMock` : déterministe, hors ligne, sans clé ni réseau. Réponse calculée
   par hachage de l'entrée → strictement reproductible.
-- `ModeleLiteLLM` : appelle un fournisseur externe via LiteLLM, mais **échoue
-  fermé** tant que la configuration n'est pas explicitement fournie
-  (fournisseur, modèle, budget, approbation). Aucun appel par défaut.
+- `ModeleLiteLLM` : appelle un fournisseur externe UNIQUEMENT via le proxy
+  `llm-gateway` (config/litellm.yaml) — jamais un fournisseur en direct —
+  et **échoue fermé** tant que la configuration, la clé proxy (`LITELLM_MASTER_KEY`)
+  et un budget strictement positif ne sont pas explicitement fournis.
 
 Le brief impose : *tout appel modèle externe doit échouer fermé si le budget,
 l'approbation, l'auth, l'isolation ou la configuration requise manque.*
+
+Règle BYOK (ÉTAPE B) : le jeton du proxy est lu depuis l'environnement au
+moment de l'appel. Il n'est jamais porté par `ConfigurationModele`, jamais
+sérialisé dans l'état LangGraph, les événements ou le manifeste.
 """
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import Protocol
 
 from .hashes import hash_objet
+
+# Adresse du proxy par défaut (réseau Docker `core` du socle).
+API_BASE_PROXY_DEFAUT = "http://llm-gateway:4000"
 
 
 class ModeleIndisponible(RuntimeError):
@@ -29,6 +38,10 @@ class ConfigurationModele:
     """Configuration explicite requise pour un provider externe.
 
     Tant qu'un seul champ manque, le provider reste désactivé.
+    Cette structure ne porte AUCUN secret ni paramètre de dépense (test BYOK :
+    aucun champ `cle`/`api_key`) : le jeton du proxy et le plafond USD sont lus
+    dans l'environnement au moment de l'appel (LITELLM_MASTER_KEY,
+    RATISS_BUDGET_USD) — c'est la décision opérateur, hors code.
     """
 
     fournisseur: str | None = None
@@ -97,20 +110,63 @@ class ModeleLiteLLM:
             )
         # Barrière 2 : dépendance disponible exigée.
         try:
-            import litellm  # noqa: PLC0415
+            import litellm  # noqa: F401, PLC0415
         except ImportError as e:  # pragma: no cover - dépend du venv
             raise ModeleIndisponible(
                 "Provider externe bloqué : litellm n'est pas installé dans cet environnement."
             ) from e
-        # Barrière 3 : jamais d'appel implicite. Le propriétaire doit fournir
-        # la clé hors bande (BYOK). Ici, on refuse tout de même l'appel réel.
-        raise ModeleIndisponible(
-            "Appel modèle externe refusé en Phase 1 (aucune clé transmise, BYOK non configuré)."
+        # Barrière 3 (ÉTAPE B, déverrouillage) : la clé du proxy vient de
+        # l'ENVIRONNEMENT, jamais de la config ni du code. Absente => refus.
+        jeton = os.environ.get("LITELLM_MASTER_KEY")
+        if not jeton:
+            raise ModeleIndisponible(
+                "Provider externe bloqué : LITELLM_MASTER_KEY absente de l'environnement "
+                "(BYOK non configuré). Aucun appel envoyé."
+            )
+        # Barrière 3-bis : plafond de dépense exigé, STRICTEMENT positif.
+        # Budget 0 ou absent => tout appel est refusé (contrôle PROMPT étape B).
+        brut_budget = os.environ.get("RATISS_BUDGET_USD")
+        try:
+            budget = float(brut_budget) if brut_budget is not None else None
+        except ValueError as e:
+            raise ModeleIndisponible(
+                "Provider externe bloqué : RATISS_BUDGET_USD n'est pas un nombre "
+                f"valide ({brut_budget!r}). Aucun appel envoyé."
+            ) from e
+        if budget is None or budget <= 0:
+            raise ModeleIndisponible(
+                "Provider externe bloqué : RATISS_BUDGET_USD absent ou <= 0 "
+                "(aucun budget autorisé). Aucun appel envoyé."
+            )
+        # Barrière 4 : le client ChatOpenAI (recette officielle LiteLLM) doit être
+        # installé. Import différé pour rester testable sans la dépendance.
+        try:
+            from langchain_openai import ChatOpenAI  # noqa: PLC0415
+        except ImportError as e:
+            raise ModeleIndisponible(
+                "Provider externe bloqué : langchain-openai n'est pas installé "
+                "(voir requirements-phase1.txt)."
+            ) from e
+        # Appel réel — UNIQUEMENT via le proxy (jamais un fournisseur en direct),
+        # sans relance automatique, température 0 pour la reproductibilité.
+        chat = ChatOpenAI(
+            model=self.config.modele,
+            api_key=jeton,
+            base_url=os.environ.get("RATISS_LLM_PROXY_URL", API_BASE_PROXY_DEFAUT),
+            temperature=0,
+            timeout=30,
+            max_retries=0,
         )
-        # pragma: no cover
-        return litellm.completion(  # noqa: ARG001
-            model=self.config.modele, messages=[{"role": "user", "content": prompt}]
-        )
+        try:
+            reponse = chat.invoke([("user", prompt)])
+        except Exception as e:  # noqa: BLE001 - toute erreur réseau/fournisseur échoue fermé
+            raise ModeleIndisponible(
+                f"Appel modèle via le proxy échoué (aucune relance automatique) : {e}"
+            ) from e
+        contenu = getattr(reponse, "content", None)
+        if contenu is None:
+            raise ModeleIndisponible("Réponse du proxy sans contenu exploitable.")
+        return str(contenu)
 
 
 def modele_par_defaut(config: ConfigurationModele | None = None) -> Modele:

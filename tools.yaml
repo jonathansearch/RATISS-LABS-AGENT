@@ -1,0 +1,81 @@
+# RATISS LABS AGENT — ÉTAPE C : inventaire déclaratif des outils MCP
+#
+# Source de vérité lue par scripts/enregistrer_outils.py :
+#   - chaque entrée de `serveurs` est enregistrée comme gateway ContextForge
+#     (les serveurs stdio passent par le pont officiel mcpgateway.translate,
+#     lancé dans son propre conteneur par docker-compose.yml) ;
+#   - le serveur virtuel `ratiss-v1` regroupe les outils des serveurs actifs ;
+#   - le script est idempotent : le relancer ne crée pas de doublon.
+#
+# Ce fichier est la liste AUTORISÉE. Tout serveur absent d'ici n'existe pas
+# pour l'agent (fail-closed, même logique que le registre statique du noyau).
+#
+# L'ÉTAPE D ajoutera le champ `x-ratiss.sha256` (admission mcp-scanner) :
+# il n'est volontairement PAS pré-inventé ici.
+
+version: 1
+
+# Serveur virtuel unique exposé au runtime (étape E) :
+#   http://mcp-gateway:4444/servers/<UUID>/mcp  — Streamable HTTP + Bearer.
+# `outils_autorises: tous` = tous les outils des serveurs `actif: true`
+# ci-dessous (l'inclusion explicite par liste d'outils est supportée par le
+# script pour les étapes suivantes, sans être nécessaire en V1).
+serveur_virtuel:
+  nom: ratiss-v1
+  description: "Serveur virtuel RATISS v1 : outils de base admis (étape C)."
+  outils_autorises: tous
+
+serveurs:
+  - nom: filesystem
+    description: "Lecture/écriture de fichiers, limitée au volume /workspace (jamais le disque entier)."
+    actif: true
+    transport: STREAMABLEHTTP
+    url: http://mcp-filesystem:9101/mcp
+    service_docker: mcp-filesystem
+    categorie: fichiers
+    source: "https://github.com/modelcontextprotocol/servers (npm @modelcontextprotocol/server-filesystem@2026.8.31)"
+
+  - nom: git
+    description: "Opérations git (status, diff, log, add, commit) sur le dépôt de travail /workspace."
+    actif: true
+    transport: STREAMABLEHTTP
+    url: http://mcp-git:9102/mcp
+    service_docker: mcp-git
+    categorie: dev
+    source: "https://github.com/modelcontextprotocol/servers (PyPI mcp-server-git==2026.8.18)"
+
+  - nom: fetch
+    description: "Récupération de pages web (à lire/convertir en markdown). Appels réseau soumis à la politique (étape F)."
+    actif: true
+    transport: STREAMABLEHTTP
+    url: http://mcp-fetch:9103/mcp
+    service_docker: mcp-fetch
+    categorie: recherche
+    source: "https://github.com/modelcontextprotocol/servers (PyPI mcp-server-fetch==2026.8.18)"
+
+  - nom: arxiv
+    description: "Recherche et téléchargement de papiers arXiv (recherche, LaTeX, BibTeX)."
+    actif: true
+    transport: STREAMABLEHTTP
+    url: http://mcp-arxiv:9104/mcp
+    service_docker: mcp-arxiv
+    categorie: recherche
+    source: "https://github.com/blazickjp/arxiv-mcp-server (PyPI arxiv-mcp-server==0.7.3)"
+
+  # OPTIONNEL : nécessite un jeton GitHub dans .env (GITHUB_TOKEN).
+  # Si le jeton est absent : le service Docker ne démarre pas (profil "github")
+  # et le script SAUTE ce serveur (fail-closed, rien de simulé).
+  - nom: github
+    description: "API GitHub officielle (repos, issues, PR). Push et création de PR = REQUIRE_APPROVAL (étape F)."
+    actif: false
+    activable_si_env: GITHUB_TOKEN
+    transport: STREAMABLEHTTP
+    url: http://mcp-github:8082/mcp
+    service_docker: mcp-github
+    categorie: dev
+    # Le même jeton sert d'identité API GitHub ET d'authentification entrante
+    # du serveur (401 sans Bearer, comportement vérifié dans le code v1.14.0) :
+    # ContextForge la stocke chiffrée (auth_type=bearer) et l'envoie à chaque appel.
+    auth_type: bearer
+    auth_token_env: GITHUB_TOKEN
+    source: "https://github.com/github/github-mcp-server v1.14.0 (image ghcr.io/github/github-mcp-server)"
