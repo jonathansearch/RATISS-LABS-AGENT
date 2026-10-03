@@ -16,3 +16,9 @@
 langgraph==1.2.12
 litellm==1.103.2
 pydantic==2.13.5
+# ÉTAPE B (PROMPT GLM) : client ChatOpenAI — recette officielle LiteLLM pour
+# appeler le proxy llm-gateway (http://llm-gateway:4000). Hors catalogue au
+# 02/10 -> justifié dans la PR étape B : MIT, requis par le PROMPT (« ChatOpenAI
+# pointé sur http://llm-gateway:4000 ») et réutilisé à l'étape E (deepagents).
+# Transitives (openai, tiktoken, langchain-core, certifi) déjà dans le lock.
+langchain-openai==1.6.7

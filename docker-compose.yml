@@ -95,6 +95,61 @@ services:
       retries: 3
       start_period: 40s
 
+  llm-gateway:
+    # Model Gateway (ÉTAPE B) : LiteLLM proxy 1.103.2 EXACT (le tag Docker
+    # main-v1.103.2 n'existe pas au 03/10/2026 -> image construite depuis PyPI,
+    # version verrouillée, voir docker/llm-gateway.Dockerfile).
+    build:
+      context: .
+      dockerfile: docker/llm-gateway.Dockerfile
+    image: ratiss-llm-gateway:1.103.2
+    container_name: ratiss-llm-gateway
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      # core : joignable par le runtime et le socle ; postgres pour le budget persistant.
+      - core
+      # edge : EXCEPTION EXPLICITE documentée (PROMPT étape A) — le gateway doit
+      # joindre les fournisseurs externes (GLM/DeepSeek). Aucun autre service
+      # du réseau core n'a d'accès internet.
+      - edge
+    environment:
+      # Auth obligatoire du proxy (BYOK) — valeur factice dans .env.example.
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?definir LITELLM_MASTER_KEY dans .env}
+      # Clés fournisseurs — absentes => les alias correspondants échouent fermé.
+      GLM_API_KEY: ${GLM_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      # Plafond de coût mensuel (défaut 10 USD, proposition à confirmer par le chef).
+      RATISS_BUDGET_USD: ${RATISS_BUDGET_USD:-10}
+      # Budget persistant : le proxy stocke ses tables LiteLLM_* dans le PostgreSQL du socle A.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ratiss}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ratiss}
+    ports:
+      # Administration/tests depuis l'hôte uniquement.
+      - "127.0.0.1:${LITELLM_PORT:-4000}:4000"
+    volumes:
+      - ./config/litellm.yaml:/app/config/litellm.yaml:ro
+
+  ollama:
+    # Option locale (aucun coût) : ne démarre QUE avec le profil "local"
+    # (`docker compose --profile local up -d`). Modèle à tirer au premier usage.
+    image: ollama/ollama:0.35.1@sha256:292ee7945dfc3d5840a181f3ab86fedb1e66703e02c8af98b50f4da56b7e278c
+    container_name: ratiss-ollama
+    restart: unless-stopped
+    profiles:
+      - local
+    networks:
+      - core
+      # edge : EXCEPTION EXPLICITE — ollama doit télécharger ses modèles depuis
+      # registry.ollama.com au premier usage (`ollama pull`). Une fois les modèles
+      # en volume, ce réseau peut être retiré par décision du chef.
+      - edge
+    ports:
+      - "127.0.0.1:${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ratiss_ollama:/root/.ollama
+
 networks:
   # Interne : aucun accès internet depuis ce réseau. Les services de base n'en ont pas besoin.
   core:
@@ -110,3 +165,4 @@ volumes:
   ratiss_redisdata:
   ratiss_objects_data:
   ratiss_objects_logs:
+  ratiss_ollama:
